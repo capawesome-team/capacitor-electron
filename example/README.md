@@ -7,6 +7,14 @@ real `@capacitor/core` `registerPlugin` calls.
 
 ## Setup
 
+Build the plugin first (the Capacitor hooks run `dist/cli/index.js` from the repo root):
+
+```bash
+cd .. && npm install && npm run build && cd example
+```
+
+Then install the example's dependencies:
+
 ```bash
 npm install
 cd electron && npm install && cd ..
