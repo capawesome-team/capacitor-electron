@@ -1,0 +1,23 @@
+{
+  "name": "capacitor-electron-example",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "sync": "cap sync @capawesome/capacitor-electron",
+    "pack": "cd electron && npm run pack:dir",
+    "e2e": "playwright test",
+    "e2e:prepare": "npm run build && npm run sync && npm run pack"
+  },
+  "dependencies": {
+    "@capacitor/app": "8.1.0",
+    "@capacitor/core": "8.3.4",
+    "@capawesome/capacitor-electron": "file:..",
+    "echo-plugin": "file:./local-plugins/echo"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.1",
+    "@playwright/test": "1.61.1",
+    "typescript": "5.9.3",
+    "vite": "8.1.4"
+  }
+}

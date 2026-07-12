@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.vscode/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '.vscode/**'
+
+env:
+  NODE_VERSION: 24
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test
+      - run: npm run lint
+
+  e2e:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        # Latest stable and the documented support floor.
+        electron-version:
+          - latest
+          - '28'
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build platform
+        working-directory: '.'
+        run: |
+          npm ci
+          npm run build
+      - name: Install example dependencies
+        run: npm install
+      - name: Install electron project dependencies
+        working-directory: example/electron
+        run: |
+          npm install
+          npm install --save-dev electron@${{ matrix.electron-version }}
+      - name: Build, sync, and package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm run build
+          npm run sync
+          npm run pack
+      - name: Run e2e (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum npx playwright test
+      - name: Run e2e
+        if: runner.os != 'Linux'
+        run: npx playwright test

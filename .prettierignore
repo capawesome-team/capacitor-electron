@@ -1,0 +1,10 @@
+build
+dist
+example/dist
+example/electron/app
+example/electron/build
+example/electron/dist
+example/electron/generated
+example/electron/vendor
+example/test-results
+example/playwright-report

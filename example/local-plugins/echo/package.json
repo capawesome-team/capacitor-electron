@@ -1,0 +1,13 @@
+{
+  "name": "echo-plugin",
+  "version": "1.0.0",
+  "description": "Committed test fixture exercising the plugin bridge in the packaged-app e2e.",
+  "capacitor": {
+    "electron": {
+      "src": "electron"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}
