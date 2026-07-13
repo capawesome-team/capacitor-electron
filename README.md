@@ -42,7 +42,10 @@ The Electron platform is typically used to bring an existing Capacitor app to th
 
 | Platform Version | Capacitor Version | Electron Version | Status         |
 | ---------------- | ----------------- | ---------------- | -------------- |
-| 0.x              | >=8.x.x           | >=28.x.x         | Active support |
+| 0.x              | >=6.x.x           | >=28.x.x         | Active support |
+
+> [!NOTE]
+> On Capacitor 6 and 7, the Capacitor CLI ignores the exit code of platform hooks, so a failing `npx cap sync` still reports success — check the log output for `[capacitor-electron]` errors. Capacitor 8 fails the command properly.
 
 ## Supported Plugins
 
