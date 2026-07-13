@@ -294,6 +294,19 @@ The constructor context provides:
 - `notifyListeners(eventName, data)` — emits a plugin event, mirroring Capacitor's native `notifyListeners`. Web listeners use the standard `addListener(eventName, callback)` / `PluginListenerHandle` API.
 - `services` — platform primitives (currently `services.bundles`: web-bundle serving, reload, and the failed-boot rollback watchdog).
 
+A plugin class may also implement an optional `initialize()` lifecycle hook:
+
+```ts
+class SqliteImpl {
+  constructor({ config, services, notifyListeners }) { ... }
+
+  // Optional. Awaited by the platform before the first window loads.
+  async initialize() { ... }
+}
+```
+
+`initialize()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: it runs whether or not it is listed in `methods`, and listing it there is harmless. A rejected or thrown `initialize()` fails the app boot loudly, the same way a declared-but-missing method does.
+
 At sync time the platform statically scans the app's dependencies and generates a plugin manifest — no plugin code runs outside Electron. Results, thrown `Error`s, and their `code` properties cross the bridge with Capacitor semantics.
 
 ## Packaging

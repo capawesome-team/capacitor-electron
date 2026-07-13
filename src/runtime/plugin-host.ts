@@ -82,6 +82,7 @@ export class PluginHost {
 
   async start(): Promise<void> {
     await this.instantiatePlugins();
+    await this.initializePlugins();
     ipcMain.on(BOOTSTRAP_CHANNEL, event => {
       if (!this.isTrustedSender(event)) {
         event.returnValue = {
@@ -191,6 +192,40 @@ export class PluginHost {
           },
           instance,
         });
+      }
+    }
+  }
+
+  /**
+   * Runs the optional `initialize()` lifecycle hook on every plugin instance
+   * that declares one, after all plugins have been constructed and before
+   * `start()` resolves (i.e. before the first window loads — see
+   * `runtime/index.ts`). This is a lifecycle hook, not a bridged method: it
+   * is detected directly on the instance and runs whether or not it appears
+   * in the plugin's declared `methods`.
+   *
+   * Hooks run sequentially, not concurrently: a plugin may repoint the
+   * active bundle here, so a deterministic order (built-ins first, then
+   * manifest order) avoids interleaved repointing, and fail-fast on the
+   * first rejection gives a clean boot failure with the offending plugin
+   * named. A throwing/rejecting hook aborts boot, consistent with how a
+   * declared-but-missing method fails.
+   */
+  private async initializePlugins(): Promise<void> {
+    for (const [pluginName, plugin] of this.plugins) {
+      const initialize = plugin.instance['initialize'];
+      if (typeof initialize !== 'function') {
+        continue;
+      }
+      try {
+        await (initialize as () => Promise<void> | void).call(plugin.instance);
+      } catch (error) {
+        throw new Error(
+          `Plugin "${pluginName}" failed to initialize: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          { cause: error },
+        );
       }
     }
   }

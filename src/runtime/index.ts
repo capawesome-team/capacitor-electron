@@ -22,6 +22,7 @@ export { defineConfig } from '../config/index';
 export type {
   BundlesService,
   ElectronPluginContext,
+  ElectronPluginLifecycle,
   PlatformServices,
 } from '../plugin/index';
 export { defineElectronPlugin } from '../plugin/index';
