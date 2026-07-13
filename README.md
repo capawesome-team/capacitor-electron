@@ -1,9 +1,5 @@
 # Capacitor Electron Platform
 
-[![npm version](https://img.shields.io/npm/v/@capawesome/capacitor-electron)](https://www.npmjs.com/package/@capawesome/capacitor-electron)
-[![npm downloads](https://img.shields.io/npm/dm/@capawesome/capacitor-electron)](https://www.npmjs.com/package/@capawesome/capacitor-electron)
-[![license](https://img.shields.io/npm/l/@capawesome/capacitor-electron)](https://github.com/capawesome-team/capacitor-electron/blob/main/LICENSE)
-
 Capacitor platform to build, run, and package desktop apps for macOS, Windows, and Linux with Electron.[^1]
 
 <div class="capawesome-z29o10a">
