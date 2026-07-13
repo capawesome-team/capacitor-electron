@@ -76,7 +76,17 @@ If you prefer **Manual Setup**, add the platform by running the following comman
 ```bash
 npm install @capawesome/capacitor-electron
 npx cap add @capawesome/capacitor-electron
-cd electron && npm install
+cd electron && npm install && cd ..
+```
+
+We recommend adding a `postinstall` script to your root `package.json` so the Electron dependencies are always installed together with your app dependencies:
+
+```json
+{
+  "scripts": {
+    "postinstall": "cd electron && npm ci && cd .."
+  }
+}
 ```
 
 > [!NOTE]
