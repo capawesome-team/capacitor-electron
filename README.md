@@ -47,6 +47,10 @@ The Electron platform is typically used to bring an existing Capacitor app to th
 > [!NOTE]
 > On Capacitor 6 and 7, the Capacitor CLI ignores the exit code of platform hooks, so a failing `npx cap sync` still reports success — check the log output for `[capacitor-electron]` errors. Capacitor 8 fails the command properly.
 
+## Guides
+
+- [Capacitor Electron Platform: Build Desktop Apps](https://capawesome.io/blog/announcing-the-capacitor-electron-platform/)
+
 ## Supported Plugins
 
 Plugins integrate with the Electron platform in one of three ways:
