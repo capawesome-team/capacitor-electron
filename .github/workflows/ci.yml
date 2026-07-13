@@ -63,16 +63,30 @@ jobs:
         electron-version:
           - latest
           - '28'
+        # '' = the Capacitor version committed in example/package.json (latest).
+        capacitor-version:
+          - ''
+        include:
+          # Older supported Capacitor majors, each on its era's minimum
+          # Node version that the example toolchain still supports.
+          - os: ubuntu-latest
+            electron-version: latest
+            capacitor-version: '6'
+            node-version: 20
+          - os: ubuntu-latest
+            electron-version: latest
+            capacitor-version: '7'
+            node-version: 20
     defaults:
       run:
         working-directory: example
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
+      - name: Set up Node.js ${{ matrix.node-version || env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.node-version || env.NODE_VERSION }}
       - name: Build platform
         working-directory: '.'
         run: |
@@ -80,6 +94,9 @@ jobs:
           npm run build
       - name: Install example dependencies
         run: npm install
+      - name: Pin Capacitor ${{ matrix.capacitor-version }}
+        if: matrix.capacitor-version != ''
+        run: npm install @capacitor/core@^${{ matrix.capacitor-version }}.0.0 @capacitor/app@^${{ matrix.capacitor-version }}.0.0 @capacitor/cli@^${{ matrix.capacitor-version }}.0.0
       - name: Install electron project dependencies
         working-directory: example/electron
         run: |
