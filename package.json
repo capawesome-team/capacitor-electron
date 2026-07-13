@@ -38,7 +38,7 @@
   "bugs": {
     "url": "https://github.com/capawesome-team/capacitor-electron/issues"
   },
-  "homepage": "https://capawesome.io/",
+  "homepage": "https://capawesome.io/docs/sdks/capacitor/electron/",
   "funding": [
     {
       "type": "github",
