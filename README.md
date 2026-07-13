@@ -89,6 +89,8 @@ We recommend adding a `postinstall` script to your root `package.json` so the El
 }
 ```
 
+The initial `cd electron && npm install` generates `electron/package-lock.json` — commit it so that `npm ci` works for every future install.
+
 > [!NOTE]
 > Always use the full package name with Capacitor CLI commands (e.g. `npx cap sync @capawesome/capacitor-electron`). A bare `npx cap sync electron` resolves to the `electron` npm package and silently does nothing.
 
