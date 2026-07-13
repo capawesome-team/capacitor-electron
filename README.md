@@ -167,6 +167,31 @@ await App.addListener('appUrlOpen', ({ url }) => {
 
 Deep links opened while the app is running are routed to the running instance (single instance is enforced by default); the URL that launched the app is available via `App.getLaunchUrl()`.
 
+### Debugging
+
+The platform keeps Electron's default application menu, so the Chromium DevTools can be opened at any time via _View → Toggle Developer Tools_ or the keyboard shortcut:
+
+| Operating System | Shortcut                                          |
+| ---------------- | ------------------------------------------------- |
+| macOS            | <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> |
+| Windows          | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> |
+| Linux            | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> |
+
+To open the DevTools automatically on launch (e.g. to catch logs from early app startup), use the `onWindowCreated` hook in `electron/capacitor.electron.config.ts`:
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+
+export default defineConfig({
+  // ...
+  hooks: {
+    onWindowCreated: window => {
+      window.webContents.openDevTools();
+    },
+  },
+});
+```
+
 ## Migration
 
 You can use our **AI-Assisted Migration** to migrate from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron).
