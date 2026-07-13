@@ -76,8 +76,20 @@ If you prefer **Manual Setup**, add the platform by running the following comman
 ```bash
 npm install @capawesome/capacitor-electron
 npx cap add @capawesome/capacitor-electron
-cd electron && npm install
+cd electron && npm install && cd ..
 ```
+
+We recommend adding a `postinstall` script to your root `package.json` so the Electron dependencies are always installed together with your app dependencies:
+
+```json
+{
+  "scripts": {
+    "postinstall": "cd electron && npm ci && cd .."
+  }
+}
+```
+
+The initial `cd electron && npm install` generates `electron/package-lock.json` — commit it so that `npm ci` works for every future install.
 
 > [!NOTE]
 > Always use the full package name with Capacitor CLI commands (e.g. `npx cap sync @capawesome/capacitor-electron`). A bare `npx cap sync electron` resolves to the `electron` npm package and silently does nothing.
