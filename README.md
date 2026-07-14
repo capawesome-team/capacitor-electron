@@ -186,6 +186,51 @@ await App.addListener('appUrlOpen', ({ url }) => {
 
 Deep links opened while the app is running are routed to the running instance (single instance is enforced by default); the URL that launched the app is available via `App.getLaunchUrl()`.
 
+### Splash Screen
+
+Booting a desktop app is not instant: the platform runs every plugin's `load()` lifecycle hook (e.g. the [Live Update](https://capawesome.io/plugins/live-update/) plugin verifying and activating a bundle) _before_ the main window is shown. A splash screen covers that gap so the app never appears frozen or blank.
+
+A splash screen is shown automatically when a splash file exists in the electron app directory — no configuration required. Two files are looked up, in order:
+
+1. `electron/assets/splash.html`
+2. `electron/assets/splash.png`
+
+The scaffold ships a neutral, theme-aware `assets/splash.html` by default. Migrating from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron)? Its `assets/splash.png` is picked up unchanged.
+
+Configure the splash screen in `electron/capacitor.electron.config.ts`:
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+
+export default defineConfig({
+  splashScreen: {
+    // Custom file, relative to the electron app directory. Either an `.html`
+    // file or an image (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`).
+    path: 'assets/splash.html',
+    width: 400,
+    height: 300,
+    backgroundColor: '#ffffff',
+    // Keep the splash visible for at least this long, even on fast startups.
+    minimumDurationMs: 0,
+  },
+});
+```
+
+| Option              | Type      | Default                                   | Description                                                                              |
+| ------------------- | --------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `enabled`           | `boolean` | shown when a splash file exists            | Set `false` to disable. Set `true` to require a splash file — boot fails if none is found. |
+| `path`              | `string`  | `assets/splash.html`, `assets/splash.png` | Splash file relative to the electron app directory.                                       |
+| `width`             | `number`  | `400`                                     | Window width in pixels.                                                                   |
+| `height`            | `number`  | `300`                                     | Window height in pixels.                                                                  |
+| `backgroundColor`   | `string`  | `'#ffffff'`                               | Window background and the canvas behind an image splash.                                  |
+| `minimumDurationMs` | `number`  | `0`                                       | Minimum time the splash stays visible.                                                    |
+
+**HTML vs. image:** an `.html` file is loaded directly, so you get full control over layout, fonts, and animation. An image is centered (`object-fit: contain`) on a `backgroundColor` canvas — convenient for a logo, but static.
+
+The splash window is deliberately kept outside the plugin bridge: it is frameless, sandboxed, has no preload and no access to the app scheme, and navigation is blocked.
+
+> **Packaging note:** the splash files live under `assets/`, which is also the electron-builder `buildResources` directory. The scaffolded `electron-builder.config.js` includes `assets/**/*` in `files` so the splash ships inside the packaged app (`app.asar`). If you replace the config, keep that entry — otherwise the splash works in development but silently disappears from packaged binaries.
+
 ### Debugging
 
 The platform keeps Electron's default application menu, so the Chromium DevTools can be opened at any time via _View → Toggle Developer Tools_ or the keyboard shortcut:
@@ -250,6 +295,7 @@ If you prefer **Manual Migration**, perform the following steps:
 Notes:
 
 - Deep links no longer require hand-written runtime code — declare the scheme in the platform config and listen to `@capacitor/app`'s `appUrlOpen` event.
+- Splash screens are picked up automatically from `electron/assets/`. Keep `assets/splash.png` and it just works; if you used a custom `splashScreenImageName: 'x.gif'`, either rename it to `assets/splash.png` or point the config at it via `splashScreen: { path: 'assets/x.gif' }` (see [Splash Screen](#splash-screen)).
 - Plugins must provide an electron implementation for this platform's contract (see [Plugin Development](#plugin-development)); implementations written for the old platform are not loaded. Plugins whose web implementation is sufficient continue to work unchanged via the automatic fallback.
 
 ## Plugin Development

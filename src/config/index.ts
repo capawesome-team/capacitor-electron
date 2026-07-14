@@ -41,6 +41,54 @@ export interface ElectronContentSecurityPolicyOptions {
   devPolicy?: string;
 }
 
+export interface ElectronSplashScreenOptions {
+  /**
+   * Whether the splash screen is shown while the app boots.
+   *
+   * When unset, the splash screen is shown only if a splash file is found
+   * (`splash.html` or `assets/splash.png` relative to the electron app
+   * directory, or the file referenced by `path`). Set to `true` to require a
+   * splash file — boot fails loudly if none resolves. Set to `false` to
+   * disable the splash screen entirely.
+   */
+  enabled?: boolean;
+  /**
+   * Path to the splash screen file, relative to the electron app directory.
+   * Either an HTML file (`.html`) or an image
+   * (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`). Images are centered
+   * on a `backgroundColor` canvas.
+   *
+   * When unset, `splash.html` and then `assets/splash.png` are tried.
+   */
+  path?: string;
+  /**
+   * Width of the splash screen window in pixels.
+   *
+   * @default 400
+   */
+  width?: number;
+  /**
+   * Height of the splash screen window in pixels.
+   *
+   * @default 300
+   */
+  height?: number;
+  /**
+   * Background color of the splash screen window (and the image canvas).
+   *
+   * @default '#ffffff'
+   */
+  backgroundColor?: string;
+  /**
+   * Minimum duration in milliseconds the splash screen stays visible, even
+   * if the app finishes booting sooner. Prevents a jarring flash on fast
+   * startups.
+   *
+   * @default 0
+   */
+  minimumDurationMs?: number;
+}
+
 export interface ElectronDeepLinksOptions {
   /**
    * Custom URL scheme to register with the operating system, e.g. `myapp`
@@ -82,6 +130,7 @@ export interface CapacitorElectronConfig {
    */
   hostname?: string;
   window?: ElectronWindowOptions;
+  splashScreen?: ElectronSplashScreenOptions;
   csp?: ElectronContentSecurityPolicyOptions;
   deepLinks?: ElectronDeepLinksOptions;
   /**

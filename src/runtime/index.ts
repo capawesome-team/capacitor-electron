@@ -15,6 +15,12 @@ import { installDeepLinks } from './deep-links';
 import { installNavigationGuards } from './navigation';
 import { PluginHost } from './plugin-host';
 import { installProtocolHandler, registerPrivilegedScheme } from './serving';
+import type { SplashScreenController } from './splash';
+import {
+  computeRemainingDelay,
+  createSplashScreen,
+  resolveSplashScreen,
+} from './splash';
 import { createMainWindow } from './window';
 
 export type { CapacitorElectronConfig } from '../config/index';
@@ -48,6 +54,11 @@ export function createCapacitorElectronApp(
     appPath,
     'plugin-manifest.json',
     { platformVersion: '0.0.0', plugins: [] },
+  );
+  const splashScreenDescriptor = resolveSplashScreen(
+    config.splashScreen,
+    appPath,
+    existsSync,
   );
   const scheme = config.scheme ?? 'capacitor-electron';
   const hostname = config.hostname ?? 'localhost';
@@ -134,32 +145,63 @@ export function createCapacitorElectronApp(
 
   registerPrivilegedScheme(scheme);
 
+  let splashScreen: SplashScreenController | null = null;
   const whenReady = app.whenReady().then(async () => {
-    await pluginHost.start();
-    installProtocolHandler(session.defaultSession, {
-      scheme,
-      hostname,
-      getRootDirectory: () =>
-        bundles.getActiveBundlePath() ?? join(appPath, 'app'),
-      getContentSecurityPolicy: () => config.csp?.policy ?? DEFAULT_CSP,
-    });
-    if (devServerUrl) {
-      installDevServerCsp(
-        session.defaultSession,
-        devServerUrl,
-        config.csp?.devPolicy ?? DEFAULT_DEV_CSP,
+    if (splashScreenDescriptor) {
+      splashScreen = createSplashScreen(splashScreenDescriptor);
+    }
+    try {
+      await pluginHost.start();
+      installProtocolHandler(session.defaultSession, {
+        scheme,
+        hostname,
+        getRootDirectory: () =>
+          bundles.getActiveBundlePath() ?? join(appPath, 'app'),
+        getContentSecurityPolicy: () => config.csp?.policy ?? DEFAULT_CSP,
+      });
+      if (devServerUrl) {
+        installDevServerCsp(
+          session.defaultSession,
+          devServerUrl,
+          config.csp?.devPolicy ?? DEFAULT_DEV_CSP,
+        );
+      }
+      const activeSplash = splashScreen;
+      mainWindow = createMainWindow(
+        config,
+        join(__dirname, '../preload/index.js'),
+        activeSplash && splashScreenDescriptor
+          ? window => {
+              const remaining = computeRemainingDelay(
+                activeSplash.shownAt,
+                splashScreenDescriptor.minimumDurationMs,
+                Date.now(),
+              );
+              const reveal = (): void => {
+                window.show();
+                activeSplash.close();
+                splashScreen = null;
+              };
+              if (remaining > 0) {
+                setTimeout(reveal, remaining);
+              } else {
+                reveal();
+              }
+            }
+          : undefined,
       );
+      installNavigationGuards(mainWindow, isTrustedUrl);
+      await config.hooks?.onWindowCreated?.(mainWindow);
+      if (devServerUrl) {
+        installDevServerRetry(mainWindow, devServerUrl);
+      }
+      await mainWindow.loadURL(devServerUrl ?? `${appOrigin}/`);
+    } catch (error) {
+      // Never let the splash linger over a crash dialog.
+      splashScreen?.close();
+      splashScreen = null;
+      throw error;
     }
-    mainWindow = createMainWindow(
-      config,
-      join(__dirname, '../preload/index.js'),
-    );
-    installNavigationGuards(mainWindow, isTrustedUrl);
-    await config.hooks?.onWindowCreated?.(mainWindow);
-    if (devServerUrl) {
-      installDevServerRetry(mainWindow, devServerUrl);
-    }
-    await mainWindow.loadURL(devServerUrl ?? `${appOrigin}/`);
   });
 
   app.on('window-all-closed', () => {

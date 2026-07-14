@@ -16,6 +16,7 @@ interface WindowState {
 export function createMainWindow(
   config: CapacitorElectronConfig,
   preloadPath: string,
+  onReadyToShow?: (window: BrowserWindow) => void,
 ): BrowserWindow {
   const windowConfig = config.window ?? {};
   const persistState = windowConfig.statePersistence !== false;
@@ -47,7 +48,13 @@ export function createMainWindow(
   if (state?.maximized) {
     window.maximize();
   }
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (onReadyToShow) {
+      onReadyToShow(window);
+    } else {
+      window.show();
+    }
+  });
   if (persistState) {
     window.on('close', () => saveWindowState(window));
   }
