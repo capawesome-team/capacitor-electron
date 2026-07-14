@@ -210,6 +210,9 @@ export function createSplashScreen(
       nodeIntegration: false,
     },
   });
+  // `will-navigate` only fires for page-initiated navigation, never for the
+  // programmatic `loadFile`/`loadURL` below, so blocking unconditionally is
+  // safe and pins the splash to its initial document.
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 

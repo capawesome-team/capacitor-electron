@@ -46,7 +46,7 @@ export interface ElectronSplashScreenOptions {
    * Whether the splash screen is shown while the app boots.
    *
    * When unset, the splash screen is shown only if a splash file is found
-   * (`splash.html` or `assets/splash.png` relative to the electron app
+   * (`assets/splash.html` or `assets/splash.png` relative to the electron app
    * directory, or the file referenced by `path`). Set to `true` to require a
    * splash file — boot fails loudly if none resolves. Set to `false` to
    * disable the splash screen entirely.
@@ -58,7 +58,7 @@ export interface ElectronSplashScreenOptions {
    * (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`). Images are centered
    * on a `backgroundColor` canvas.
    *
-   * When unset, `splash.html` and then `assets/splash.png` are tried.
+   * When unset, `assets/splash.html` and then `assets/splash.png` are tried.
    */
   path?: string;
   /**
