@@ -117,6 +117,34 @@ export interface ElectronHooks {
 }
 
 export interface CapacitorElectronConfig {
+  csp?: ElectronContentSecurityPolicyOptions;
+  deepLinks?: ElectronDeepLinksOptions;
+  hooks?: ElectronHooks;
+  /**
+   * Hostname of the served origin.
+   *
+   * @default 'localhost'
+   */
+  hostname?: string;
+  /**
+   * Per-plugin configuration overrides. Merged over the `plugins` section of
+   * the Capacitor config (shallow merge per plugin, this section wins) before
+   * plugins receive their config. Useful for Electron-specific values — and,
+   * because this file is executable TypeScript, for computed values such as a
+   * live-update channel derived from the app version.
+   *
+   * @example
+   * import { version } from './package.json';
+   *
+   * export default defineConfig({
+   *   plugins: {
+   *     LiveUpdate: {
+   *       defaultChannel: `production-${version}`,
+   *     },
+   *   },
+   * });
+   */
+  plugins?: { [pluginName: string]: { [key: string]: unknown } };
   /**
    * Custom scheme used to serve the web app.
    *
@@ -124,23 +152,14 @@ export interface CapacitorElectronConfig {
    */
   scheme?: string;
   /**
-   * Hostname of the served origin.
-   *
-   * @default 'localhost'
-   */
-  hostname?: string;
-  window?: ElectronWindowOptions;
-  splashScreen?: ElectronSplashScreenOptions;
-  csp?: ElectronContentSecurityPolicyOptions;
-  deepLinks?: ElectronDeepLinksOptions;
-  /**
    * Enforce a single running instance of the app. Required for deep links
    * on Windows and Linux.
    *
    * @default true
    */
   singleInstance?: boolean;
-  hooks?: ElectronHooks;
+  splashScreen?: ElectronSplashScreenOptions;
+  window?: ElectronWindowOptions;
 }
 
 export function defineConfig(

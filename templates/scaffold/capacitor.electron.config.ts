@@ -15,4 +15,14 @@ export default defineConfig({
   //   backgroundColor: '#ffffff',
   //   minimumDurationMs: 0,
   // },
+  // Per-plugin config overrides. Merged over the `plugins` section of the
+  // Capacitor config (this section wins per key) — the Electron equivalent of
+  // Android string resources / iOS Info.plist plugin settings. Being
+  // TypeScript, values can be computed, e.g. a live-update channel derived
+  // from the app version (`import { version } from './package.json'`):
+  // plugins: {
+  //   LiveUpdate: {
+  //     defaultChannel: `production-${version}`,
+  //   },
+  // },
 });

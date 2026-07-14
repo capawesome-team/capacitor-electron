@@ -13,6 +13,7 @@ import { Bundles } from './bundles';
 import { DEFAULT_CSP, DEFAULT_DEV_CSP, installDevServerCsp } from './csp';
 import { installDeepLinks } from './deep-links';
 import { installNavigationGuards } from './navigation';
+import { mergePluginConfig } from './plugin-config';
 import { PluginHost } from './plugin-host';
 import { installProtocolHandler, registerPrivilegedScheme } from './serving';
 import type { SplashScreenController } from './splash';
@@ -46,9 +47,9 @@ export function createCapacitorElectronApp(
   config: CapacitorElectronConfig = {},
 ): CapacitorElectronApp {
   const appPath = app.getAppPath();
-  const capacitorConfig = readGeneratedJson<CapacitorAppConfig>(
-    appPath,
-    'capacitor.config.json',
+  const capacitorConfig = mergePluginConfig(
+    readGeneratedJson<CapacitorAppConfig>(appPath, 'capacitor.config.json'),
+    config.plugins,
   );
   const manifest = readGeneratedJson<PluginManifest>(
     appPath,

@@ -134,6 +134,27 @@ export default defineConfig({
 
 Extension happens through typed options and hooks (`windowFactory`, `beforeReady`, `onWindowCreated`, CSP overrides) — never by owning runtime code.
 
+### Plugin Configuration
+
+Some plugins support platform-specific configuration on Android and iOS — for example, the Capacitor Live Update plugin reads a default channel from an Android string resource or an iOS `Info.plist` key so the build system can inject a value derived from the app version. The `plugins` section of `electron/capacitor.electron.config.ts` fills that role on Electron — generically, for every plugin. Because the file is executable TypeScript evaluated in the main process, values can be computed in code — no template syntax required.
+
+It is merged over the `plugins` section of the Capacitor config **shallowly, per plugin key, and this section wins**: for each plugin, its keys override the matching keys in the Capacitor config while unmentioned keys survive; plugins present in only one of the two configs pass through unchanged. Everything outside `plugins` is untouched. The merge runs once at startup, before plugins receive their config.
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+import { version } from './package.json';
+
+export default defineConfig({
+  plugins: {
+    LiveUpdate: {
+      defaultChannel: `production-${version}`,
+    },
+  },
+});
+```
+
+> Importing `./package.json` requires `resolveJsonModule` in `electron/tsconfig.json` (already enabled in the scaffold).
+
 ## Demo
 
 A working example can be found here: [capawesome-team/capacitor-electron](https://github.com/capawesome-team/capacitor-electron/tree/main/example)
