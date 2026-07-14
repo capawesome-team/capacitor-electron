@@ -134,12 +134,12 @@ export interface CapacitorElectronConfig {
    * live-update channel derived from the app version.
    *
    * @example
-   * import { version } from './package.json';
+   * import packageJson from './package.json';
    *
    * export default defineConfig({
    *   plugins: {
    *     LiveUpdate: {
-   *       defaultChannel: `production-${version}`,
+   *       defaultChannel: `production-${packageJson.version}`,
    *     },
    *   },
    * });

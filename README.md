@@ -142,12 +142,12 @@ It is merged over the `plugins` section of the Capacitor config **shallowly, per
 
 ```typescript
 import { defineConfig } from '@capawesome/capacitor-electron/config';
-import { version } from './package.json';
+import packageJson from './package.json';
 
 export default defineConfig({
   plugins: {
     LiveUpdate: {
-      defaultChannel: `production-${version}`,
+      defaultChannel: `production-${packageJson.version}`,
     },
   },
 });
