@@ -33,6 +33,24 @@ describe('validateDeclaredMethods', () => {
       validateDeclaredMethods('Sqlite', ['open', 'missing'], instance, 'pkg'),
     ).toThrow(/declares method "missing" but does not implement it/);
   });
+
+  it('rejects the reserved "initialize" lifecycle hook in methods', () => {
+    expect(() =>
+      validateDeclaredMethods(
+        'Sqlite',
+        ['open', 'initialize'],
+        {
+          ...instance,
+          async initialize(): Promise<void> {
+            // noop
+          },
+        },
+        'pkg',
+      ),
+    ).toThrow(
+      /lists "initialize" in `methods`, but `initialize` is a reserved lifecycle hook/,
+    );
+  });
 });
 
 const flushMicrotasks = (): Promise<void> =>
@@ -164,7 +182,22 @@ describe('PluginHost initialize lifecycle hook', () => {
     );
   });
 
-  it('runs the hook even when initialize is declared in methods', async () => {
+  it('runs the hook when initialize is not listed in methods', async () => {
+    let initialized = false;
+    const host = createHostWithPlugin(
+      { name: 'Unlisted', methods: [] },
+      class {
+        async initialize(): Promise<void> {
+          initialized = true;
+        }
+      },
+    );
+
+    await expect(host.start()).resolves.toBeUndefined();
+    expect(initialized).toBe(true);
+  });
+
+  it('rejects boot when initialize is listed in methods', async () => {
     let initialized = false;
     const host = createHostWithPlugin(
       { name: 'Listed', methods: ['initialize'] },
@@ -175,7 +208,9 @@ describe('PluginHost initialize lifecycle hook', () => {
       },
     );
 
-    await expect(host.start()).resolves.toBeUndefined();
-    expect(initialized).toBe(true);
+    await expect(host.start()).rejects.toThrow(
+      /lists "initialize" in `methods`, but `initialize` is a reserved lifecycle hook/,
+    );
+    expect(initialized).toBe(false);
   });
 });

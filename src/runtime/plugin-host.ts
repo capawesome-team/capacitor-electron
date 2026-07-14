@@ -201,8 +201,9 @@ export class PluginHost {
    * that declares one, after all plugins have been constructed and before
    * `start()` resolves (i.e. before the first window loads — see
    * `runtime/index.ts`). This is a lifecycle hook, not a bridged method: it
-   * is detected directly on the instance and runs whether or not it appears
-   * in the plugin's declared `methods`.
+   * is detected directly on the instance, and `initialize` is reserved — it
+   * must not appear in the plugin's declared `methods` (rejected at boot by
+   * `validateDeclaredMethods`) and is never bridged to the renderer.
    *
    * Hooks run sequentially, not concurrently: a plugin may repoint the
    * active bundle here, so a deterministic order (built-ins first, then
@@ -386,6 +387,10 @@ function markedPluginClasses(pluginModule: PluginModule): MarkedPluginClass[] {
 /**
  * The declared methods are the contract; a declared method missing on the
  * instance is a plugin bug surfaced at boot instead of at call time.
+ *
+ * `initialize` is a reserved lifecycle hook (run by `initializePlugins`) and
+ * is never bridged. Listing it in `methods` would expose the hook to the
+ * renderer for arbitrary re-invocation, so it is rejected at boot.
  */
 export function validateDeclaredMethods(
   pluginName: string,
@@ -394,6 +399,11 @@ export function validateDeclaredMethods(
   packageName: string,
 ): void {
   for (const methodName of methods) {
+    if (methodName === 'initialize') {
+      throw new Error(
+        `Plugin "${pluginName}" (from ${packageName}) lists "initialize" in \`methods\`, but \`initialize\` is a reserved lifecycle hook and must not be bridged. Remove it from \`methods\`.`,
+      );
+    }
     if (typeof instance[methodName] !== 'function') {
       throw new Error(
         `Plugin "${pluginName}" (from ${packageName}) declares method "${methodName}" but does not implement it.`,

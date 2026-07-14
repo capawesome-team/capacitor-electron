@@ -72,6 +72,11 @@ export interface ElectronPluginMetadata {
    * The plugin's public API: the methods exposed to the web app. Methods
    * not listed here are never bridged. Each declared method must exist on
    * the class prototype (validated at boot).
+   *
+   * `initialize` is reserved for the lifecycle hook (see
+   * {@link ElectronPluginLifecycle}) and must NOT be listed here — doing so
+   * is rejected at boot, because bridging it would let the renderer invoke
+   * the lifecycle hook arbitrarily.
    */
   methods: string[];
 }
@@ -83,9 +88,10 @@ export interface ElectronPluginMetadata {
  * the platform before the first application window loads, so a plugin can
  * perform async setup (e.g. repointing the active bundle via
  * `services.bundles`) and have it take effect on first paint. It is a
- * lifecycle hook, NOT a bridged method: it is invoked whether or not it is
- * listed in the static metadata's `methods`, and listing it there is
- * harmless. A rejected/thrown `initialize` fails the app boot loudly.
+ * lifecycle hook, NOT a bridged method: `initialize` is reserved and is
+ * never bridged to the renderer. It must NOT be listed in the static
+ * metadata's `methods` — doing so is rejected at boot. A rejected/thrown
+ * `initialize` fails the app boot loudly.
  */
 export interface ElectronPluginLifecycle {
   initialize?(): Promise<void> | void;

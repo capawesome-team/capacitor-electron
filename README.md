@@ -305,7 +305,7 @@ class SqliteImpl {
 }
 ```
 
-`initialize()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: it runs whether or not it is listed in `methods`, and listing it there is harmless. A rejected or thrown `initialize()` fails the app boot loudly, the same way a declared-but-missing method does.
+`initialize()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: `initialize` is reserved and is never bridged to the renderer. It must **not** be listed in `methods` — doing so is rejected at boot, because bridging it would let web content invoke the lifecycle hook arbitrarily. A rejected or thrown `initialize()` fails the app boot loudly, the same way a declared-but-missing method does.
 
 At sync time the platform statically scans the app's dependencies and generates a plugin manifest — no plugin code runs outside Electron. Results, thrown `Error`s, and their `code` properties cross the bridge with Capacitor semantics.
 
