@@ -5,7 +5,7 @@ import type {
   ElectronPluginContext,
   ElectronPluginMetadata,
 } from '../plugin/index';
-import { defineElectronPlugin } from '../plugin/index';
+import { ElectronPlugin, defineElectronPlugin } from '../plugin/index';
 import type { PluginManifest } from '../shared/definitions';
 
 import { PluginHost, validateDeclaredMethods } from './plugin-host';
@@ -34,21 +34,21 @@ describe('validateDeclaredMethods', () => {
     ).toThrow(/declares method "missing" but does not implement it/);
   });
 
-  it('rejects the reserved "initialize" lifecycle hook in methods', () => {
+  it('rejects the reserved "load" lifecycle hook in methods', () => {
     expect(() =>
       validateDeclaredMethods(
         'Sqlite',
-        ['open', 'initialize'],
+        ['open', 'load'],
         {
           ...instance,
-          async initialize(): Promise<void> {
+          async load(): Promise<void> {
             // noop
           },
         },
         'pkg',
       ),
     ).toThrow(
-      /lists "initialize" in `methods`, but `initialize` is a reserved lifecycle hook/,
+      /lists "load" in `methods`, but `load` is a reserved lifecycle hook/,
     );
   });
 });
@@ -88,8 +88,8 @@ const createHostWithPlugin = (
   });
 };
 
-describe('PluginHost initialize lifecycle hook', () => {
-  it('resolves start() when a plugin has no initialize hook', async () => {
+describe('PluginHost load lifecycle hook', () => {
+  it('resolves start() when a plugin has no load hook', async () => {
     const host = createHostWithPlugin(
       { name: 'NoHook', methods: [] },
       class {},
@@ -98,34 +98,34 @@ describe('PluginHost initialize lifecycle hook', () => {
     await expect(host.start()).resolves.toBeUndefined();
   });
 
-  it('awaits a synchronous initialize hook before start() resolves', async () => {
-    let initialized = false;
+  it('awaits a synchronous load hook before start() resolves', async () => {
+    let loaded = false;
     const host = createHostWithPlugin(
       { name: 'Sync', methods: [] },
       class {
-        initialize(): void {
-          initialized = true;
+        load(): void {
+          loaded = true;
         }
       },
     );
 
     await host.start();
 
-    expect(initialized).toBe(true);
+    expect(loaded).toBe(true);
   });
 
-  it('awaits an async initialize hook before start() resolves', async () => {
-    let resolveInit!: () => void;
+  it('awaits an async load hook before start() resolves', async () => {
+    let resolveLoad!: () => void;
     const gate = new Promise<void>(resolve => {
-      resolveInit = resolve;
+      resolveLoad = resolve;
     });
-    let initialized = false;
+    let loaded = false;
     const host = createHostWithPlugin(
       { name: 'Async', methods: [] },
       class {
-        async initialize(): Promise<void> {
+        async load(): Promise<void> {
           await gate;
-          initialized = true;
+          loaded = true;
         }
       },
     );
@@ -137,21 +137,21 @@ describe('PluginHost initialize lifecycle hook', () => {
 
     await flushMicrotasks();
     expect(started).toBe(false);
-    expect(initialized).toBe(false);
+    expect(loaded).toBe(false);
 
-    resolveInit();
+    resolveLoad();
     await startPromise;
     expect(started).toBe(true);
-    expect(initialized).toBe(true);
+    expect(loaded).toBe(true);
   });
 
-  it('provides the plugin context so initialize can repoint the active bundle before start() resolves', async () => {
+  it('provides the plugin context so load can repoint the active bundle before start() resolves', async () => {
     const bundles = createBundlesStub();
     const host = createHostWithPlugin(
       { name: 'Repoint', methods: [] },
       class {
         constructor(private readonly context: ElectronPluginContext) {}
-        async initialize(): Promise<void> {
+        async load(): Promise<void> {
           await this.context.services.bundles.setActiveBundle('/bundle', {
             bootWatchdog: false,
           });
@@ -167,50 +167,83 @@ describe('PluginHost initialize lifecycle hook', () => {
     });
   });
 
-  it('fails boot loudly when initialize rejects', async () => {
+  it('awaits an overridden async load() on an ElectronPlugin subclass, passing the context via the base constructor', async () => {
+    const bundles = createBundlesStub();
+    let loaded = false;
+    const host = createHostWithPlugin(
+      { name: 'Subclass', methods: [] },
+      class extends ElectronPlugin {
+        async load(): Promise<void> {
+          await this.context.services.bundles.setActiveBundle('/bundle', {
+            bootWatchdog: false,
+          });
+          loaded = true;
+        }
+      },
+      bundles,
+    );
+
+    await host.start();
+
+    expect(loaded).toBe(true);
+    expect(bundles.setActiveBundle).toHaveBeenCalledWith('/bundle', {
+      bootWatchdog: false,
+    });
+  });
+
+  it('resolves start() with the base ElectronPlugin no-op load() when not overridden', async () => {
+    const host = createHostWithPlugin(
+      { name: 'BaseNoop', methods: [] },
+      class extends ElectronPlugin {},
+    );
+
+    await expect(host.start()).resolves.toBeUndefined();
+  });
+
+  it('fails boot loudly when load rejects', async () => {
     const host = createHostWithPlugin(
       { name: 'Rejecting', methods: [] },
       class {
-        async initialize(): Promise<void> {
+        async load(): Promise<void> {
           throw new Error('boom');
         }
       },
     );
 
     await expect(host.start()).rejects.toThrow(
-      /Plugin "Rejecting" failed to initialize: boom/,
+      /Plugin "Rejecting" failed to load: boom/,
     );
   });
 
-  it('runs the hook when initialize is not listed in methods', async () => {
-    let initialized = false;
+  it('runs the structural load() hook of a marker-only plugin', async () => {
+    let loaded = false;
     const host = createHostWithPlugin(
-      { name: 'Unlisted', methods: [] },
+      { name: 'MarkerOnly', methods: [] },
       class {
-        async initialize(): Promise<void> {
-          initialized = true;
+        async load(): Promise<void> {
+          loaded = true;
         }
       },
     );
 
     await expect(host.start()).resolves.toBeUndefined();
-    expect(initialized).toBe(true);
+    expect(loaded).toBe(true);
   });
 
-  it('rejects boot when initialize is listed in methods', async () => {
-    let initialized = false;
+  it('rejects boot when load is listed in methods', async () => {
+    let loaded = false;
     const host = createHostWithPlugin(
-      { name: 'Listed', methods: ['initialize'] },
+      { name: 'Listed', methods: ['load'] },
       class {
-        async initialize(): Promise<void> {
-          initialized = true;
+        async load(): Promise<void> {
+          loaded = true;
         }
       },
     );
 
     await expect(host.start()).rejects.toThrow(
-      /lists "initialize" in `methods`, but `initialize` is a reserved lifecycle hook/,
+      /lists "load" in `methods`, but `load` is a reserved lifecycle hook/,
     );
-    expect(initialized).toBe(false);
+    expect(loaded).toBe(false);
   });
 });

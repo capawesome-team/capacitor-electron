@@ -25,7 +25,7 @@ export type {
   ElectronPluginLifecycle,
   PlatformServices,
 } from '../plugin/index';
-export { defineElectronPlugin } from '../plugin/index';
+export { ElectronPlugin, defineElectronPlugin } from '../plugin/index';
 
 export interface CapacitorElectronApp {
   /**

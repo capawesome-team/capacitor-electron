@@ -264,11 +264,20 @@ Plugins declare their electron implementation via `package.json`:
 }
 ```
 
-The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so no build-time dependency on this package is required:
+The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so a build-time dependency on this package is not required.
+
+### Recommended: extend `ElectronPlugin`
+
+Mirroring how Android/iOS plugins extend Capacitor's `Plugin` and override `load()`, the recommended path is to extend the `ElectronPlugin` base class. Add `@capawesome/capacitor-electron` as a **devDependency** (for the types) and an **optional peerDependency** (for the runtime value), then:
 
 ```ts
-class SqliteImpl {
-  constructor({ config, services, notifyListeners }) { ... }
+import { ElectronPlugin, defineElectronPlugin } from '@capawesome/capacitor-electron/plugin';
+
+class SqliteImpl extends ElectronPlugin {
+  // `this.context` (config, services, notifyListeners) is stored by the base constructor.
+
+  // Optional lifecycle hook. Awaited by the platform before the first window loads.
+  async load() { ... }
 
   async open(options) { ... }
   async query(options) { ... }
@@ -277,7 +286,31 @@ class SqliteImpl {
   resolvePath(path) { ... }
 }
 
-// Equivalent: import { defineElectronPlugin } from '@capawesome/capacitor-electron/plugin';
+export const Sqlite = defineElectronPlugin(
+  { name: 'Sqlite', methods: ['open', 'query'] },
+  SqliteImpl,
+);
+```
+
+### Zero-dependency: marker-only
+
+The base class is optional sugar — the discovery contract is the static `__capacitorElectronPlugin` metadata, and the lifecycle hook is detected structurally (never via `instanceof`, which would break across duplicated copies of this package). So a plugin can ship with **no dependency on this package at all**, implementing a structural `load()` if it needs the hook:
+
+```ts
+class SqliteImpl {
+  constructor({ config, services, notifyListeners }) { ... }
+
+  // Optional. Structural lifecycle hook, detected by name.
+  async load() { ... }
+
+  async open(options) { ... }
+  async query(options) { ... }
+
+  // Not declared below, therefore never bridged.
+  resolvePath(path) { ... }
+}
+
+// Equivalent to defineElectronPlugin, without importing this package.
 SqliteImpl.__capacitorElectronPlugin = {
   name: 'Sqlite',
   methods: ['open', 'query'],
@@ -288,24 +321,15 @@ export { SqliteImpl as Sqlite };
 
 The declared `methods` array is the plugin's entire bridged surface: anything not listed stays main-process-internal, and a declared method that is missing on the class fails loudly at boot. Each class is instantiated once in the main process (full Node and Electron API access) and exposed under its registration name through Capacitor's native plugin path — `registerPlugin('Sqlite', { web: ... })` just works, with the web implementation as the automatic fallback for platforms the plugin doesn't cover. No `electron` key in the plugin's `registerPlugin` wiring is needed.
 
-The constructor context provides:
+The constructor context (`this.context` on an `ElectronPlugin` subclass, or the constructor argument otherwise) provides:
 
 - `config` — the app's Capacitor configuration.
 - `notifyListeners(eventName, data)` — emits a plugin event, mirroring Capacitor's native `notifyListeners`. Web listeners use the standard `addListener(eventName, callback)` / `PluginListenerHandle` API.
 - `services` — platform primitives (currently `services.bundles`: web-bundle serving, reload, and the failed-boot rollback watchdog).
 
-A plugin class may also implement an optional `initialize()` lifecycle hook:
+### The `load()` lifecycle hook
 
-```ts
-class SqliteImpl {
-  constructor({ config, services, notifyListeners }) { ... }
-
-  // Optional. Awaited by the platform before the first window loads.
-  async initialize() { ... }
-}
-```
-
-`initialize()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: `initialize` is reserved and is never bridged to the renderer. It must **not** be listed in `methods` — doing so is rejected at boot, because bridging it would let web content invoke the lifecycle hook arbitrarily. A rejected or thrown `initialize()` fails the app boot loudly, the same way a declared-but-missing method does.
+`load()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: `load` is reserved and is never bridged to the renderer. It must **not** be listed in `methods` — doing so is rejected at boot, because bridging it would let web content invoke the lifecycle hook arbitrarily. A rejected or thrown `load()` fails the app boot loudly, the same way a declared-but-missing method does. On an `ElectronPlugin` subclass the default `load()` is a no-op, so overriding it is optional.
 
 At sync time the platform statically scans the app's dependencies and generates a plugin manifest — no plugin code runs outside Electron. Results, thrown `Error`s, and their `code` properties cross the bridge with Capacitor semantics.
 
