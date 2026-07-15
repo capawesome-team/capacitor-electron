@@ -1,3 +1,4 @@
+import type { BrowserWindow } from 'electron';
 import { join, sep } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -6,8 +7,10 @@ import {
   buildImageWrapperHtml,
   classifySplashType,
   computeRemainingDelay,
+  createSplashRevealHandler,
   resolveSplashScreen,
 } from './splash';
+import type { SplashScreenController } from './splash';
 
 vi.mock('electron', () => ({ BrowserWindow: vi.fn() }));
 
@@ -165,5 +168,80 @@ describe('computeRemainingDelay', () => {
 
   it('returns the remaining time when the minimum duration has not elapsed', () => {
     expect(computeRemainingDelay(1000, 2000, 1500)).toBe(1500);
+  });
+});
+
+describe('createSplashRevealHandler', () => {
+  const createSplash = (shownAt = 1000) => {
+    const splash = {
+      close: vi.fn(),
+      shownAt,
+    } as unknown as SplashScreenController;
+    return splash;
+  };
+  const createWindow = () => ({ show: vi.fn() }) as unknown as BrowserWindow;
+
+  it('shows the window, closes the splash and notifies when no delay remains', () => {
+    const splash = createSplash();
+    const window = createWindow();
+    const onClosed = vi.fn();
+    const handler = createSplashRevealHandler({
+      splash,
+      minimumDurationMs: 0,
+      showOnLaunch: true,
+      onClosed,
+      now: () => 1000,
+    });
+
+    handler(window);
+
+    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(splash.close).toHaveBeenCalledTimes(1);
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('still closes the splash but does not show the window when showOnLaunch is false', () => {
+    const splash = createSplash();
+    const window = createWindow();
+    const onClosed = vi.fn();
+    const handler = createSplashRevealHandler({
+      splash,
+      minimumDurationMs: 0,
+      showOnLaunch: false,
+      onClosed,
+      now: () => 1000,
+    });
+
+    handler(window);
+
+    expect(window.show).not.toHaveBeenCalled();
+    expect(splash.close).toHaveBeenCalledTimes(1);
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers the reveal until the minimum duration has elapsed', () => {
+    const splash = createSplash(1000);
+    const window = createWindow();
+    const schedule = vi.fn();
+    const handler = createSplashRevealHandler({
+      splash,
+      minimumDurationMs: 2000,
+      showOnLaunch: true,
+      onClosed: vi.fn(),
+      now: () => 1500,
+      schedule,
+    });
+
+    handler(window);
+
+    expect(schedule).toHaveBeenCalledTimes(1);
+    expect(schedule.mock.calls[0][1]).toBe(1500);
+    expect(window.show).not.toHaveBeenCalled();
+    expect(splash.close).not.toHaveBeenCalled();
+
+    // Running the scheduled callback performs the deferred reveal.
+    (schedule.mock.calls[0][0] as () => void)();
+    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(splash.close).toHaveBeenCalledTimes(1);
   });
 });

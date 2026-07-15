@@ -20,6 +20,7 @@ export function createMainWindow(
 ): BrowserWindow {
   const windowConfig = config.window ?? {};
   const persistState = windowConfig.statePersistence !== false;
+  const showOnLaunch = windowConfig.showOnLaunch !== false;
   const state = persistState ? readWindowState() : null;
   const options: BrowserWindowConstructorOptions = {
     width: state?.width ?? windowConfig.width ?? 1200,
@@ -51,7 +52,7 @@ export function createMainWindow(
   window.once('ready-to-show', () => {
     if (onReadyToShow) {
       onReadyToShow(window);
-    } else {
+    } else if (showOnLaunch) {
       window.show();
     }
   });

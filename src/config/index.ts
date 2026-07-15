@@ -25,6 +25,17 @@ export interface ElectronWindowOptions {
    * @default true
    */
   statePersistence?: boolean;
+  /**
+   * Whether the main window is shown automatically once it is ready.
+   *
+   * When `false`, the main window is created hidden and is not shown when
+   * ready — useful for apps that start minimized to a tray. The window can be
+   * surfaced later via `window.show()` (e.g. from a tray menu, see the tray
+   * recipe in the README) or when a second app launch focuses it.
+   *
+   * @default true
+   */
+  showOnLaunch?: boolean;
   titleBarStyle?: 'default' | 'hidden' | 'hiddenInset';
 }
 

@@ -277,6 +277,37 @@ export default defineConfig({
 });
 ```
 
+### Tray Icon
+
+Use the `onWindowCreated` hook together with Electron's [`Tray`](https://www.electronjs.org/docs/latest/api/tray) and [`Menu`](https://www.electronjs.org/docs/latest/api/menu) APIs to add a tray icon and context menu:
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+import { app, Menu, Tray } from 'electron';
+import { join } from 'path';
+
+export default defineConfig({
+  // ...
+  hooks: {
+    onWindowCreated: window => {
+      const tray = new Tray(join(app.getAppPath(), 'assets', 'tray-icon.png'));
+      tray.setContextMenu(
+        Menu.buildFromTemplate([
+          { label: 'Show', click: () => window.show() },
+          { label: 'Hide', click: () => window.hide() },
+          { type: 'separator' },
+          { label: 'Quit', click: () => app.quit() },
+        ]),
+      );
+    },
+  },
+});
+```
+
+Place the tray icon under `electron/assets/`, which already ships inside the packaged app (see the [Splash Screen](#splash-screen) packaging note). To start the app minimized to the tray, set [`window.showOnLaunch: false`](#configuration) so the main window is created hidden until the user picks _Show_.
+
+> **Migrating from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron)?** This recipe replaces its `trayIconAndMenuEnabled` and `hideMainWindowOnLaunch` options — build the tray via the hook above and use `window.showOnLaunch: false` for start-in-tray behavior.
+
 ## Migration
 
 You can use our **AI-Assisted Migration** to migrate from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron).

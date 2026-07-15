@@ -18,7 +18,7 @@ import { PluginHost } from './plugin-host';
 import { installProtocolHandler, registerPrivilegedScheme } from './serving';
 import type { SplashScreenController } from './splash';
 import {
-  computeRemainingDelay,
+  createSplashRevealHandler,
   createSplashScreen,
   resolveSplashScreen,
 } from './splash';
@@ -106,6 +106,9 @@ export function createCapacitorElectronApp(
         if (window.isMinimized()) {
           window.restore();
         }
+        // Surface the window even if it launched hidden (`showOnLaunch: false`,
+        // start-in-tray apps): a second launch should bring the app to front.
+        window.show();
         window.focus();
       }
       deepLinks?.handleArgv(argv);
@@ -172,23 +175,14 @@ export function createCapacitorElectronApp(
         config,
         join(__dirname, '../preload/index.js'),
         activeSplash && splashScreenDescriptor
-          ? window => {
-              const remaining = computeRemainingDelay(
-                activeSplash.shownAt,
-                splashScreenDescriptor.minimumDurationMs,
-                Date.now(),
-              );
-              const reveal = (): void => {
-                window.show();
-                activeSplash.close();
+          ? createSplashRevealHandler({
+              splash: activeSplash,
+              minimumDurationMs: splashScreenDescriptor.minimumDurationMs,
+              showOnLaunch: config.window?.showOnLaunch !== false,
+              onClosed: () => {
                 splashScreen = null;
-              };
-              if (remaining > 0) {
-                setTimeout(reveal, remaining);
-              } else {
-                reveal();
-              }
-            }
+              },
+            })
           : undefined,
       );
       installNavigationGuards(mainWindow, isTrustedUrl);

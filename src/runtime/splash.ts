@@ -185,6 +185,55 @@ export function computeRemainingDelay(
   return Math.max(0, minimumDurationMs - (now - shownAt));
 }
 
+export interface SplashRevealHandlerOptions {
+  splash: SplashScreenController;
+  minimumDurationMs: number;
+  /**
+   * Whether to show the main window once the splash screen is dismissed. When
+   * `false` (start-in-tray apps) the splash still closes on schedule, but the
+   * main window stays hidden.
+   */
+  showOnLaunch: boolean;
+  /**
+   * Invoked after the splash screen has been closed.
+   */
+  onClosed: () => void;
+  now?: () => number;
+  schedule?: (callback: () => void, delayMs: number) => void;
+}
+
+/**
+ * Builds the `ready-to-show` handler that dismisses the splash screen once its
+ * minimum duration has elapsed and — unless `showOnLaunch` is `false` — reveals
+ * the main window. Keeping this pure (time source and scheduler are injectable)
+ * makes the reveal timing testable without a real window.
+ */
+export function createSplashRevealHandler(
+  options: SplashRevealHandlerOptions,
+): (window: BrowserWindow) => void {
+  const now = options.now ?? Date.now;
+  const schedule = options.schedule ?? setTimeout;
+  return window => {
+    const reveal = (): void => {
+      if (options.showOnLaunch) {
+        window.show();
+      }
+      options.splash.close();
+      options.onClosed();
+    };
+    const remaining = computeRemainingDelay(
+      options.splash.shownAt,
+      options.minimumDurationMs,
+      now(),
+    );
+    if (remaining > 0) {
+      schedule(reveal, remaining);
+    } else {
+      reveal();
+    }
+  };
+}
+
 /**
  * Creates and shows the splash screen window. The window is intentionally
  * kept outside the plugin bridge/trust model: no preload, no custom scheme,
