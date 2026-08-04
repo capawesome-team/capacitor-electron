@@ -134,6 +134,27 @@ export default defineConfig({
 
 Extension happens through typed options and hooks (`windowFactory`, `beforeReady`, `onWindowCreated`, CSP overrides) — never by owning runtime code.
 
+### Plugin Configuration
+
+Some plugins support platform-specific configuration on Android and iOS — for example, the Capacitor Live Update plugin reads a default channel from an Android string resource or an iOS `Info.plist` key so the build system can inject a value derived from the app version. The `plugins` section of `electron/capacitor.electron.config.ts` fills that role on Electron — generically, for every plugin. Because the file is executable TypeScript evaluated in the main process, values can be computed in code — no template syntax required.
+
+It is merged over the `plugins` section of the Capacitor config **shallowly, per plugin key, and this section wins**: for each plugin, its keys override the matching keys in the Capacitor config while unmentioned keys survive; plugins present in only one of the two configs pass through unchanged. Everything outside `plugins` is untouched. The merge runs once at startup, before plugins receive their config.
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+import packageJson from './package.json';
+
+export default defineConfig({
+  plugins: {
+    LiveUpdate: {
+      defaultChannel: `production-${packageJson.version}`,
+    },
+  },
+});
+```
+
+> Importing `./package.json` requires `resolveJsonModule` in `electron/tsconfig.json` (already enabled in the scaffold).
+
 ## Demo
 
 A working example can be found here: [capawesome-team/capacitor-electron](https://github.com/capawesome-team/capacitor-electron/tree/main/example)
@@ -186,6 +207,51 @@ await App.addListener('appUrlOpen', ({ url }) => {
 
 Deep links opened while the app is running are routed to the running instance (single instance is enforced by default); the URL that launched the app is available via `App.getLaunchUrl()`.
 
+### Splash Screen
+
+Booting a desktop app is not instant: the platform runs every plugin's `load()` lifecycle hook (e.g. the [Live Update](https://capawesome.io/plugins/live-update/) plugin verifying and activating a bundle) _before_ the main window is shown. A splash screen covers that gap so the app never appears frozen or blank.
+
+A splash screen is shown automatically when a splash file exists in the electron app directory — no configuration required. Two files are looked up, in order:
+
+1. `electron/assets/splash.html`
+2. `electron/assets/splash.png`
+
+The scaffold ships a neutral, theme-aware `assets/splash.html` by default. Migrating from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron)? Its `assets/splash.png` is picked up unchanged.
+
+Configure the splash screen in `electron/capacitor.electron.config.ts`:
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+
+export default defineConfig({
+  splashScreen: {
+    // Custom file, relative to the electron app directory. Either an `.html`
+    // file or an image (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`).
+    path: 'assets/splash.html',
+    width: 400,
+    height: 300,
+    backgroundColor: '#ffffff',
+    // Keep the splash visible for at least this long, even on fast startups.
+    minimumDurationMs: 0,
+  },
+});
+```
+
+| Option              | Type      | Default                                   | Description                                                                              |
+| ------------------- | --------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `enabled`           | `boolean` | shown when a splash file exists            | Set `false` to disable. Set `true` to require a splash file — boot fails if none is found. |
+| `path`              | `string`  | `assets/splash.html`, `assets/splash.png` | Splash file relative to the electron app directory.                                       |
+| `width`             | `number`  | `400`                                     | Window width in pixels.                                                                   |
+| `height`            | `number`  | `300`                                     | Window height in pixels.                                                                  |
+| `backgroundColor`   | `string`  | `'#ffffff'`                               | Window background and the canvas behind an image splash.                                  |
+| `minimumDurationMs` | `number`  | `0`                                       | Minimum time the splash stays visible.                                                    |
+
+**HTML vs. image:** an `.html` file is loaded directly, so you get full control over layout, fonts, and animation. An image is centered (`object-fit: contain`) on a `backgroundColor` canvas — convenient for a logo, but static.
+
+The splash window is deliberately kept outside the plugin bridge: it is frameless, sandboxed, has no preload and no access to the app scheme, and navigation is blocked.
+
+> **Packaging note:** the splash files live under `assets/`, which is also the electron-builder `buildResources` directory. The scaffolded `electron-builder.config.js` includes `assets/**/*` in `files` so the splash ships inside the packaged app (`app.asar`). If you replace the config, keep that entry — otherwise the splash works in development but silently disappears from packaged binaries.
+
 ### Debugging
 
 The platform keeps Electron's default application menu, so the Chromium DevTools can be opened at any time via _View → Toggle Developer Tools_ or the keyboard shortcut:
@@ -210,6 +276,37 @@ export default defineConfig({
   },
 });
 ```
+
+### Tray Icon
+
+Use the `onWindowCreated` hook together with Electron's [`Tray`](https://www.electronjs.org/docs/latest/api/tray) and [`Menu`](https://www.electronjs.org/docs/latest/api/menu) APIs to add a tray icon and context menu:
+
+```typescript
+import { defineConfig } from '@capawesome/capacitor-electron/config';
+import { app, Menu, Tray } from 'electron';
+import { join } from 'path';
+
+export default defineConfig({
+  // ...
+  hooks: {
+    onWindowCreated: window => {
+      const tray = new Tray(join(app.getAppPath(), 'assets', 'tray-icon.png'));
+      tray.setContextMenu(
+        Menu.buildFromTemplate([
+          { label: 'Show', click: () => window.show() },
+          { label: 'Hide', click: () => window.hide() },
+          { type: 'separator' },
+          { label: 'Quit', click: () => app.quit() },
+        ]),
+      );
+    },
+  },
+});
+```
+
+Place the tray icon under `electron/assets/`, which already ships inside the packaged app (see the [Splash Screen](#splash-screen) packaging note). To start the app minimized to the tray, set [`window.showOnLaunch: false`](#configuration) so the main window is created hidden until the user picks _Show_.
+
+> **Migrating from [`@capacitor-community/electron`](https://github.com/capacitor-community/electron)?** This recipe replaces its `trayIconAndMenuEnabled` and `hideMainWindowOnLaunch` options — build the tray via the hook above and use `window.showOnLaunch: false` for start-in-tray behavior.
 
 ## Migration
 
@@ -250,6 +347,7 @@ If you prefer **Manual Migration**, perform the following steps:
 Notes:
 
 - Deep links no longer require hand-written runtime code — declare the scheme in the platform config and listen to `@capacitor/app`'s `appUrlOpen` event.
+- Splash screens are picked up automatically from `electron/assets/`. Keep `assets/splash.png` and it just works; if you used a custom `splashScreenImageName: 'x.gif'`, either rename it to `assets/splash.png` or point the config at it via `splashScreen: { path: 'assets/x.gif' }` (see [Splash Screen](#splash-screen)).
 - Plugins must provide an electron implementation for this platform's contract (see [Plugin Development](#plugin-development)); implementations written for the old platform are not loaded. Plugins whose web implementation is sufficient continue to work unchanged via the automatic fallback.
 
 ## Plugin Development
@@ -264,11 +362,20 @@ Plugins declare their electron implementation via `package.json`:
 }
 ```
 
-The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so no build-time dependency on this package is required:
+The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so a build-time dependency on this package is not required.
+
+### Recommended: extend `ElectronPlugin`
+
+Mirroring how Android/iOS plugins extend Capacitor's `Plugin` and override `load()`, the recommended path is to extend the `ElectronPlugin` base class. Add `@capawesome/capacitor-electron` as a **devDependency** (for the types) and an **optional peerDependency** (for the runtime value), then:
 
 ```ts
-class SqliteImpl {
-  constructor({ config, services, notifyListeners }) { ... }
+import { ElectronPlugin, defineElectronPlugin } from '@capawesome/capacitor-electron/plugin';
+
+class SqliteImpl extends ElectronPlugin {
+  // `this.context` (config, services, notifyListeners) is stored by the base constructor.
+
+  // Optional lifecycle hook. Awaited by the platform before the first window loads.
+  async load() { ... }
 
   async open(options) { ... }
   async query(options) { ... }
@@ -277,7 +384,31 @@ class SqliteImpl {
   resolvePath(path) { ... }
 }
 
-// Equivalent: import { defineElectronPlugin } from '@capawesome/capacitor-electron/plugin';
+export const Sqlite = defineElectronPlugin(
+  { name: 'Sqlite', methods: ['open', 'query'] },
+  SqliteImpl,
+);
+```
+
+### Zero-dependency: marker-only
+
+The base class is optional sugar — the discovery contract is the static `__capacitorElectronPlugin` metadata, and the lifecycle hook is detected structurally (never via `instanceof`, which would break across duplicated copies of this package). So a plugin can ship with **no dependency on this package at all**, implementing a structural `load()` if it needs the hook:
+
+```ts
+class SqliteImpl {
+  constructor({ config, services, notifyListeners }) { ... }
+
+  // Optional. Structural lifecycle hook, detected by name.
+  async load() { ... }
+
+  async open(options) { ... }
+  async query(options) { ... }
+
+  // Not declared below, therefore never bridged.
+  resolvePath(path) { ... }
+}
+
+// Equivalent to defineElectronPlugin, without importing this package.
 SqliteImpl.__capacitorElectronPlugin = {
   name: 'Sqlite',
   methods: ['open', 'query'],
@@ -288,11 +419,15 @@ export { SqliteImpl as Sqlite };
 
 The declared `methods` array is the plugin's entire bridged surface: anything not listed stays main-process-internal, and a declared method that is missing on the class fails loudly at boot. Each class is instantiated once in the main process (full Node and Electron API access) and exposed under its registration name through Capacitor's native plugin path — `registerPlugin('Sqlite', { web: ... })` just works, with the web implementation as the automatic fallback for platforms the plugin doesn't cover. No `electron` key in the plugin's `registerPlugin` wiring is needed.
 
-The constructor context provides:
+The constructor context (`this.context` on an `ElectronPlugin` subclass, or the constructor argument otherwise) provides:
 
 - `config` — the app's Capacitor configuration.
 - `notifyListeners(eventName, data)` — emits a plugin event, mirroring Capacitor's native `notifyListeners`. Web listeners use the standard `addListener(eventName, callback)` / `PluginListenerHandle` API.
 - `services` — platform primitives (currently `services.bundles`: web-bundle serving, reload, and the failed-boot rollback watchdog).
+
+### The `load()` lifecycle hook
+
+`load()` runs once after the plugin is constructed and is **awaited before the first application window loads**, so async setup — including repointing the active bundle via `services.bundles.setActiveBundle()` — takes effect on first paint (no default-bundle flash). It is a lifecycle hook, **not** a bridged method: `load` is reserved and is never bridged to the renderer. It must **not** be listed in `methods` — doing so is rejected at boot, because bridging it would let web content invoke the lifecycle hook arbitrarily. A rejected or thrown `load()` fails the app boot loudly, the same way a declared-but-missing method does. On an `ElectronPlugin` subclass the default `load()` is a no-op, so overriding it is optional.
 
 At sync time the platform statically scans the app's dependencies and generates a plugin manifest — no plugin code runs outside Electron. Results, thrown `Error`s, and their `code` properties cross the bridge with Capacitor semantics.
 

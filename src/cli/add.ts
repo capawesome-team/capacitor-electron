@@ -5,7 +5,7 @@ import { join } from 'path';
 import type { CliContext } from './context';
 import { logInfo, fail } from './log';
 
-const TEXT_EXTENSIONS = ['.ts', '.js', '.json', '.md'];
+const TEXT_EXTENSIONS = ['.ts', '.js', '.json', '.md', '.html'];
 
 const slugify = (value: string): string =>
   value

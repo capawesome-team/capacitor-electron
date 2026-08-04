@@ -6,6 +6,7 @@
     "outDir": "build",
     "strict": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true
   },
   "include": ["main.ts", "capacitor.electron.config.ts"]

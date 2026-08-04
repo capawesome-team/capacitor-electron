@@ -25,6 +25,17 @@ export interface ElectronWindowOptions {
    * @default true
    */
   statePersistence?: boolean;
+  /**
+   * Whether the main window is shown automatically once it is ready.
+   *
+   * When `false`, the main window is created hidden and is not shown when
+   * ready — useful for apps that start minimized to a tray. The window can be
+   * surfaced later via `window.show()` (e.g. from a tray menu, see the tray
+   * recipe in the README) or when a second app launch focuses it.
+   *
+   * @default true
+   */
+  showOnLaunch?: boolean;
   titleBarStyle?: 'default' | 'hidden' | 'hiddenInset';
 }
 
@@ -39,6 +50,54 @@ export interface ElectronContentSecurityPolicyOptions {
    * HMR (inline scripts, websockets). Replaces the default dev policy.
    */
   devPolicy?: string;
+}
+
+export interface ElectronSplashScreenOptions {
+  /**
+   * Whether the splash screen is shown while the app boots.
+   *
+   * When unset, the splash screen is shown only if a splash file is found
+   * (`assets/splash.html` or `assets/splash.png` relative to the electron app
+   * directory, or the file referenced by `path`). Set to `true` to require a
+   * splash file — boot fails loudly if none resolves. Set to `false` to
+   * disable the splash screen entirely.
+   */
+  enabled?: boolean;
+  /**
+   * Path to the splash screen file, relative to the electron app directory.
+   * Either an HTML file (`.html`) or an image
+   * (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`). Images are centered
+   * on a `backgroundColor` canvas.
+   *
+   * When unset, `assets/splash.html` and then `assets/splash.png` are tried.
+   */
+  path?: string;
+  /**
+   * Width of the splash screen window in pixels.
+   *
+   * @default 400
+   */
+  width?: number;
+  /**
+   * Height of the splash screen window in pixels.
+   *
+   * @default 300
+   */
+  height?: number;
+  /**
+   * Background color of the splash screen window (and the image canvas).
+   *
+   * @default '#ffffff'
+   */
+  backgroundColor?: string;
+  /**
+   * Minimum duration in milliseconds the splash screen stays visible, even
+   * if the app finishes booting sooner. Prevents a jarring flash on fast
+   * startups.
+   *
+   * @default 0
+   */
+  minimumDurationMs?: number;
 }
 
 export interface ElectronDeepLinksOptions {
@@ -69,6 +128,34 @@ export interface ElectronHooks {
 }
 
 export interface CapacitorElectronConfig {
+  csp?: ElectronContentSecurityPolicyOptions;
+  deepLinks?: ElectronDeepLinksOptions;
+  hooks?: ElectronHooks;
+  /**
+   * Hostname of the served origin.
+   *
+   * @default 'localhost'
+   */
+  hostname?: string;
+  /**
+   * Per-plugin configuration overrides. Merged over the `plugins` section of
+   * the Capacitor config (shallow merge per plugin, this section wins) before
+   * plugins receive their config. Useful for Electron-specific values — and,
+   * because this file is executable TypeScript, for computed values such as a
+   * live-update channel derived from the app version.
+   *
+   * @example
+   * import packageJson from './package.json';
+   *
+   * export default defineConfig({
+   *   plugins: {
+   *     LiveUpdate: {
+   *       defaultChannel: `production-${packageJson.version}`,
+   *     },
+   *   },
+   * });
+   */
+  plugins?: { [pluginName: string]: { [key: string]: unknown } };
   /**
    * Custom scheme used to serve the web app.
    *
@@ -76,22 +163,14 @@ export interface CapacitorElectronConfig {
    */
   scheme?: string;
   /**
-   * Hostname of the served origin.
-   *
-   * @default 'localhost'
-   */
-  hostname?: string;
-  window?: ElectronWindowOptions;
-  csp?: ElectronContentSecurityPolicyOptions;
-  deepLinks?: ElectronDeepLinksOptions;
-  /**
    * Enforce a single running instance of the app. Required for deep links
    * on Windows and Linux.
    *
    * @default true
    */
   singleInstance?: boolean;
-  hooks?: ElectronHooks;
+  splashScreen?: ElectronSplashScreenOptions;
+  window?: ElectronWindowOptions;
 }
 
 export function defineConfig(

@@ -27,6 +27,11 @@ export interface BundlesServiceOptions {
  * reload, and the failed-boot rollback watchdog. The OTA update product
  * (download, verification, channels) is deliberately NOT part of the
  * platform; it consumes this primitive.
+ *
+ * The watchdog is opt-out per activation via
+ * `setActiveBundle(dir, { bootWatchdog: false })`: a consumer that owns its
+ * own rollback state machine (e.g. a live-update engine) must disable it, as
+ * two concurrent watchdogs writing two persisted states would drift.
  */
 export class Bundles implements BundlesService {
   private readonly options: BundlesServiceOptions;
@@ -62,7 +67,10 @@ export class Bundles implements BundlesService {
     return this.state.activeBundlePath;
   }
 
-  async setActiveBundle(bundleDirectory: string | null): Promise<void> {
+  async setActiveBundle(
+    bundleDirectory: string | null,
+    options?: { bootWatchdog?: boolean },
+  ): Promise<void> {
     if (
       bundleDirectory !== null &&
       !existsSync(join(bundleDirectory, 'index.html'))
@@ -71,15 +79,21 @@ export class Bundles implements BundlesService {
         `Bundle directory ${bundleDirectory} does not contain an index.html.`,
       );
     }
+    // A pending marker exists only while the watchdog is responsible for
+    // this activation. With `bootWatchdog: false` the caller owns rollback,
+    // so no marker is written (the startup pending-check never reverts it)
+    // and `notifyBootReady()` is a no-op for this activation.
+    const bootWatchdog = options?.bootWatchdog ?? true;
+    const pending = bundleDirectory !== null && bootWatchdog;
     this.cancelWatchdog();
     this.state = {
       activeBundlePath: bundleDirectory,
       previousBundlePath: this.state.activeBundlePath,
-      pending: bundleDirectory !== null,
+      pending,
     };
     this.writeState();
     this.options.reloadWindows();
-    if (bundleDirectory !== null) {
+    if (pending) {
       this.armWatchdog();
     }
   }

@@ -13,8 +13,15 @@ import { Bundles } from './bundles';
 import { DEFAULT_CSP, DEFAULT_DEV_CSP, installDevServerCsp } from './csp';
 import { installDeepLinks } from './deep-links';
 import { installNavigationGuards } from './navigation';
+import { mergePluginConfig } from './plugin-config';
 import { PluginHost } from './plugin-host';
 import { installProtocolHandler, registerPrivilegedScheme } from './serving';
+import type { SplashScreenController } from './splash';
+import {
+  createSplashRevealHandler,
+  createSplashScreen,
+  resolveSplashScreen,
+} from './splash';
 import { createMainWindow } from './window';
 
 export type { CapacitorElectronConfig } from '../config/index';
@@ -22,9 +29,10 @@ export { defineConfig } from '../config/index';
 export type {
   BundlesService,
   ElectronPluginContext,
+  ElectronPluginLifecycle,
   PlatformServices,
 } from '../plugin/index';
-export { defineElectronPlugin } from '../plugin/index';
+export { ElectronPlugin, defineElectronPlugin } from '../plugin/index';
 
 export interface CapacitorElectronApp {
   /**
@@ -39,14 +47,19 @@ export function createCapacitorElectronApp(
   config: CapacitorElectronConfig = {},
 ): CapacitorElectronApp {
   const appPath = app.getAppPath();
-  const capacitorConfig = readGeneratedJson<CapacitorAppConfig>(
-    appPath,
-    'capacitor.config.json',
+  const capacitorConfig = mergePluginConfig(
+    readGeneratedJson<CapacitorAppConfig>(appPath, 'capacitor.config.json'),
+    config.plugins,
   );
   const manifest = readGeneratedJson<PluginManifest>(
     appPath,
     'plugin-manifest.json',
     { platformVersion: '0.0.0', plugins: [] },
+  );
+  const splashScreenDescriptor = resolveSplashScreen(
+    config.splashScreen,
+    appPath,
+    existsSync,
   );
   const scheme = config.scheme ?? 'capacitor-electron';
   const hostname = config.hostname ?? 'localhost';
@@ -93,6 +106,9 @@ export function createCapacitorElectronApp(
         if (window.isMinimized()) {
           window.restore();
         }
+        // Surface the window even if it launched hidden (`showOnLaunch: false`,
+        // start-in-tray apps): a second launch should bring the app to front.
+        window.show();
         window.focus();
       }
       deepLinks?.handleArgv(argv);
@@ -133,32 +149,54 @@ export function createCapacitorElectronApp(
 
   registerPrivilegedScheme(scheme);
 
+  let splashScreen: SplashScreenController | null = null;
   const whenReady = app.whenReady().then(async () => {
-    await pluginHost.start();
-    installProtocolHandler(session.defaultSession, {
-      scheme,
-      hostname,
-      getRootDirectory: () =>
-        bundles.getActiveBundlePath() ?? join(appPath, 'app'),
-      getContentSecurityPolicy: () => config.csp?.policy ?? DEFAULT_CSP,
-    });
-    if (devServerUrl) {
-      installDevServerCsp(
-        session.defaultSession,
-        devServerUrl,
-        config.csp?.devPolicy ?? DEFAULT_DEV_CSP,
+    if (splashScreenDescriptor) {
+      splashScreen = createSplashScreen(splashScreenDescriptor);
+    }
+    try {
+      await pluginHost.start();
+      installProtocolHandler(session.defaultSession, {
+        scheme,
+        hostname,
+        getRootDirectory: () =>
+          bundles.getActiveBundlePath() ?? join(appPath, 'app'),
+        getContentSecurityPolicy: () => config.csp?.policy ?? DEFAULT_CSP,
+      });
+      if (devServerUrl) {
+        installDevServerCsp(
+          session.defaultSession,
+          devServerUrl,
+          config.csp?.devPolicy ?? DEFAULT_DEV_CSP,
+        );
+      }
+      const activeSplash = splashScreen;
+      mainWindow = createMainWindow(
+        config,
+        join(__dirname, '../preload/index.js'),
+        activeSplash && splashScreenDescriptor
+          ? createSplashRevealHandler({
+              splash: activeSplash,
+              minimumDurationMs: splashScreenDescriptor.minimumDurationMs,
+              showOnLaunch: config.window?.showOnLaunch !== false,
+              onClosed: () => {
+                splashScreen = null;
+              },
+            })
+          : undefined,
       );
+      installNavigationGuards(mainWindow, isTrustedUrl);
+      await config.hooks?.onWindowCreated?.(mainWindow);
+      if (devServerUrl) {
+        installDevServerRetry(mainWindow, devServerUrl);
+      }
+      await mainWindow.loadURL(devServerUrl ?? `${appOrigin}/`);
+    } catch (error) {
+      // Never let the splash linger over a crash dialog.
+      splashScreen?.close();
+      splashScreen = null;
+      throw error;
     }
-    mainWindow = createMainWindow(
-      config,
-      join(__dirname, '../preload/index.js'),
-    );
-    installNavigationGuards(mainWindow, isTrustedUrl);
-    await config.hooks?.onWindowCreated?.(mainWindow);
-    if (devServerUrl) {
-      installDevServerRetry(mainWindow, devServerUrl);
-    }
-    await mainWindow.loadURL(devServerUrl ?? `${appOrigin}/`);
   });
 
   app.on('window-all-closed', () => {

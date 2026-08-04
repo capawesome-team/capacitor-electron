@@ -82,6 +82,7 @@ export class PluginHost {
 
   async start(): Promise<void> {
     await this.instantiatePlugins();
+    await this.loadPlugins();
     ipcMain.on(BOOTSTRAP_CHANNEL, event => {
       if (!this.isTrustedSender(event)) {
         event.returnValue = {
@@ -191,6 +192,45 @@ export class PluginHost {
           },
           instance,
         });
+      }
+    }
+  }
+
+  /**
+   * Runs the optional `load()` lifecycle hook on every plugin instance that
+   * declares one, after all plugins have been constructed and before
+   * `start()` resolves (i.e. before the first window loads — see
+   * `runtime/index.ts`). This mirrors how Android/iOS plugins override
+   * Capacitor's `load()`. The hook is detected structurally on the instance
+   * (never via `instanceof`, which would break across duplicated copies of
+   * this package), so both {@link ElectronPlugin} subclasses and marker-only
+   * plugins that implement a structural `load()` are picked up. It is a
+   * lifecycle hook, not a bridged method: `load` is reserved — it must not
+   * appear in the plugin's declared `methods` (rejected at boot by
+   * `validateDeclaredMethods`) and is never bridged to the renderer.
+   *
+   * Hooks run sequentially, not concurrently: a plugin may repoint the
+   * active bundle here, so a deterministic order (built-ins first, then
+   * manifest order) avoids interleaved repointing, and fail-fast on the
+   * first rejection gives a clean boot failure with the offending plugin
+   * named. A throwing/rejecting hook aborts boot, consistent with how a
+   * declared-but-missing method fails.
+   */
+  private async loadPlugins(): Promise<void> {
+    for (const [pluginName, plugin] of this.plugins) {
+      const load = plugin.instance['load'];
+      if (typeof load !== 'function') {
+        continue;
+      }
+      try {
+        await (load as () => Promise<void> | void).call(plugin.instance);
+      } catch (error) {
+        throw new Error(
+          `Plugin "${pluginName}" failed to load: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          { cause: error },
+        );
       }
     }
   }
@@ -351,6 +391,10 @@ function markedPluginClasses(pluginModule: PluginModule): MarkedPluginClass[] {
 /**
  * The declared methods are the contract; a declared method missing on the
  * instance is a plugin bug surfaced at boot instead of at call time.
+ *
+ * `load` is a reserved lifecycle hook (run by `loadPlugins`) and is never
+ * bridged. Listing it in `methods` would expose the hook to the renderer for
+ * arbitrary re-invocation, so it is rejected at boot.
  */
 export function validateDeclaredMethods(
   pluginName: string,
@@ -359,6 +403,11 @@ export function validateDeclaredMethods(
   packageName: string,
 ): void {
   for (const methodName of methods) {
+    if (methodName === 'load') {
+      throw new Error(
+        `Plugin "${pluginName}" (from ${packageName}) lists "load" in \`methods\`, but \`load\` is a reserved lifecycle hook and must not be bridged. Remove it from \`methods\`.`,
+      );
+    }
     if (typeof instance[methodName] !== 'function') {
       throw new Error(
         `Plugin "${pluginName}" (from ${packageName}) declares method "${methodName}" but does not implement it.`,
