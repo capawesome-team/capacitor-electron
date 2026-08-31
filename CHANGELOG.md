@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/capawesome-team/capacitor-electron/compare/v0.1.0...v0.1.1) (2026-08-04)
+
+
+### Features
+
+* plugin lifecycle, watchdog opt-out, and splash screen ([#6](https://github.com/capawesome-team/capacitor-electron/issues/6)) ([49998de](https://github.com/capawesome-team/capacitor-electron/commit/49998de6eee689d73ce08081eb4fbb6bf7d33e25))
+
 ## [0.1.0](https://github.com/capawesome-team/capacitor-electron/compare/v0.0.1...v0.1.0) (2026-07-13)
 
 
