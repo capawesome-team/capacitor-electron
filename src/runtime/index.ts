@@ -10,7 +10,7 @@ import type { CapacitorAppConfig, PluginManifest } from '../shared/definitions';
 
 import { APP_PLUGIN_METHODS, APP_PLUGIN_NAME, AppPlugin } from './app-plugin';
 import { installAppState } from './app-state';
-import { Bundles } from './bundles';
+import { InMemoryBundleService } from './bundle-service';
 import { DEFAULT_CSP, DEFAULT_DEV_CSP, installDevServerCsp } from './csp';
 import { installDeepLinks } from './deep-links';
 import { createTrustedUrlMatcher, installNavigationGuards } from './navigation';
@@ -28,7 +28,7 @@ import { createMainWindow, reloadAppWindows } from './window';
 export type { CapacitorElectronConfig } from '../config/index';
 export { defineConfig } from '../config/index';
 export type {
-  BundlesService,
+  BundleService,
   ElectronPluginContext,
   ElectronPluginLifecycle,
   PlatformServices,
@@ -69,7 +69,7 @@ export function createCapacitorElectronApp(
   const isTrustedUrl = createTrustedUrlMatcher(appOrigin, devServerUrl);
 
   let mainWindow: BrowserWindow | null = null;
-  const bundles = new Bundles({
+  const bundles = new InMemoryBundleService({
     reloadWindows: () =>
       reloadAppWindows(isTrustedUrl, webContents =>
         pluginHost.dropSubscriptions(webContents.id),

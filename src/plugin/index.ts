@@ -8,7 +8,7 @@ import type { CapacitorAppConfig } from '../shared/definitions';
  */
 export const ELECTRON_PLUGIN_MARKER = '__capacitorElectronPlugin';
 
-export interface BundlesService {
+export interface BundleService {
   /**
    * Absolute path of the currently active web bundle directory, or `null`
    * when the packaged app bundle is active.
@@ -30,7 +30,7 @@ export interface BundlesService {
  * Platform primitives exposed to plugins.
  */
 export interface PlatformServices {
-  bundles: BundlesService;
+  bundles: BundleService;
 }
 
 export interface ElectronPluginContext {

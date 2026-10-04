@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
-  BundlesService,
+  BundleService,
   ElectronPluginContext,
   ElectronPluginMetadata,
 } from '../plugin/index';
@@ -62,7 +62,7 @@ describe('validateDeclaredMethods', () => {
 const flushMicrotasks = (): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, 0));
 
-const createBundlesStub = (): BundlesService => ({
+const createBundleServiceStub = (): BundleService => ({
   getActiveBundlePath: vi.fn(() => null),
   setActiveBundle: vi.fn(),
 });
@@ -70,7 +70,7 @@ const createBundlesStub = (): BundlesService => ({
 const createHostWithPlugin = (
   metadata: ElectronPluginMetadata,
   pluginClass: new (context: ElectronPluginContext) => unknown,
-  bundles: BundlesService = createBundlesStub(),
+  bundles: BundleService = createBundleServiceStub(),
 ): PluginHost => {
   const packageName = 'pkg';
   const manifest: PluginManifest = {
@@ -149,7 +149,7 @@ describe('PluginHost load lifecycle hook', () => {
   });
 
   it('provides the plugin context so load can repoint the active bundle before start() resolves', async () => {
-    const bundles = createBundlesStub();
+    const bundles = createBundleServiceStub();
     const host = createHostWithPlugin(
       { name: 'Repoint', methods: [] },
       class {
@@ -167,7 +167,7 @@ describe('PluginHost load lifecycle hook', () => {
   });
 
   it('awaits an overridden async load() on an ElectronPlugin subclass, passing the context via the base constructor', async () => {
-    const bundles = createBundlesStub();
+    const bundles = createBundleServiceStub();
     let loaded = false;
     const host = createHostWithPlugin(
       { name: 'Subclass', methods: [] },

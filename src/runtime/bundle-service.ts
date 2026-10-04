@@ -1,9 +1,9 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 
-import type { BundlesService } from '../plugin/index';
+import type { BundleService } from '../plugin/index';
 
-export interface BundlesServiceOptions {
+export interface BundleServiceOptions {
   reloadWindows: () => void;
 }
 
@@ -13,11 +13,11 @@ export interface BundlesServiceOptions {
  * rollback are deliberately NOT part of the platform; the consumer (e.g. a
  * live-update plugin) owns them and re-applies its bundle in `load()`.
  */
-export class Bundles implements BundlesService {
-  private readonly options: BundlesServiceOptions;
+export class InMemoryBundleService implements BundleService {
+  private readonly options: BundleServiceOptions;
   private activeBundlePath: string | null = null;
 
-  constructor(options: BundlesServiceOptions) {
+  constructor(options: BundleServiceOptions) {
     this.options = options;
   }
 
