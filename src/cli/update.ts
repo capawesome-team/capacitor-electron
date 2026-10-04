@@ -10,6 +10,8 @@ import type {
 import type { CliContext } from './context';
 import { requirePlatformDir } from './context';
 import { embedConfig } from './copy';
+import type { ElectronPluginPackageJson } from './electron-src';
+import { getElectronSrc } from './electron-src';
 import { logInfo, logWarn } from './log';
 
 export async function updateCommand(context: CliContext): Promise<void> {
@@ -68,10 +70,10 @@ function scanDependency(
   if (!existsSync(packageJsonPath)) {
     return null;
   }
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-    capacitor?: { electron?: { src?: string } };
-  };
-  const electronSrc = packageJson.capacitor?.electron?.src;
+  const packageJson = JSON.parse(
+    readFileSync(packageJsonPath, 'utf8'),
+  ) as ElectronPluginPackageJson;
+  const electronSrc = getElectronSrc(packageJson);
   if (!electronSrc) {
     return null;
   }

@@ -1,5 +1,5 @@
 import { BrowserWindow, app } from 'electron';
-import type { BrowserWindowConstructorOptions } from 'electron';
+import type { BrowserWindowConstructorOptions, WebContents } from 'electron';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -60,6 +60,22 @@ export function createMainWindow(
     window.on('close', () => saveWindowState(window));
   }
   return window;
+}
+
+/**
+ * Reloads the windows showing app content; the splash screen and foreign
+ * windows (e.g. OAuth popups) are left alone.
+ */
+export function reloadAppWindows(
+  isTrustedUrl: (url: string) => boolean,
+  beforeReload: (webContents: WebContents) => void,
+): void {
+  for (const { webContents } of BrowserWindow.getAllWindows()) {
+    if (isTrustedUrl(webContents.getURL())) {
+      beforeReload(webContents);
+      webContents.reload();
+    }
+  }
 }
 
 const windowStateFilePath = (): string =>

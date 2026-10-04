@@ -411,7 +411,7 @@ The constructor context (`this.context` on an `ElectronPlugin` subclass, or the 
 
 - `config` — the app's Capacitor configuration.
 - `notifyListeners(eventName, data)` — emits a plugin event, mirroring Capacitor's native `notifyListeners`. Web listeners use the standard `addListener(eventName, callback)` / `PluginListenerHandle` API.
-- `services` — platform primitives (currently `services.bundles`: web-bundle serving, reload, and the failed-boot rollback watchdog).
+- `services` — platform primitives (currently `services.bundles`: switch the served web-bundle directory and reload the app windows).
 
 ### The `load()` lifecycle hook
 
@@ -436,7 +436,7 @@ Code signing, notarization, targets (dmg/msi/nsis/AppImage/deb), and icons are s
 Two independent update layers, matching mobile:
 
 - **Binary updates** (Electron itself, the runtime, native modules): use [electron-updater](https://www.electron.build/auto-update) — the desktop analog of an app-store update. Wire it in your `main.ts`; it operates on the packaged artifacts produced above.
-- **Web-bundle updates**: the platform ships the serving primitive only — `services.bundles` (activate a bundle directory, reload, boot-ready signal, and a failed-boot rollback watchdog that reverts to the previous bundle if the renderer doesn't confirm startup). The OTA update product on top of it (download, channels, verification) is deliberately not part of the platform.
+- **Web-bundle updates**: the platform ships the serving primitive only — `services.bundles` (`setActiveBundle(dir | null)` switches the served directory in memory and reloads the app windows; `getActiveBundlePath()` returns it). The platform persists nothing and never rolls back: the OTA update product on top of it (download, persistence, failed-boot rollback, channels, verification) is deliberately not part of the platform and re-applies its active bundle in its plugin's `load()` hook.
 
 ## Electron Support Policy
 

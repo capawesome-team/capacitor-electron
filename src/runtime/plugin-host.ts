@@ -26,6 +26,7 @@ type PluginModule = Record<string, unknown>;
 interface EventSubscription {
   pluginName: string;
   eventName: string;
+  listenerId: number;
   sender: WebContents;
 }
 
@@ -84,6 +85,9 @@ export class PluginHost {
     await this.instantiatePlugins();
     await this.loadPlugins();
     ipcMain.on(BOOTSTRAP_CHANNEL, event => {
+      // The preload bootstraps once per page load and restarts its listener
+      // ids, so subscriptions of the previous page must not survive a reload.
+      this.dropSubscriptions(event.sender.id);
       if (!this.isTrustedSender(event)) {
         event.returnValue = {
           platformName: this.options.platformName,
@@ -121,16 +125,15 @@ export class PluginHost {
     options?: { retain?: boolean },
   ): void {
     let delivered = false;
-    for (const [key, subscription] of this.subscriptions) {
+    for (const subscription of this.subscriptions.values()) {
       if (
         subscription.pluginName === pluginName &&
         subscription.eventName === eventName &&
         !subscription.sender.isDestroyed()
       ) {
-        const listenerId = Number(key.split(':').pop());
         subscription.sender.send(EVENT_CHANNEL, {
           pluginName,
-          listenerId,
+          listenerId: subscription.listenerId,
           data,
         });
         delivered = true;
@@ -197,24 +200,10 @@ export class PluginHost {
   }
 
   /**
-   * Runs the optional `load()` lifecycle hook on every plugin instance that
-   * declares one, after all plugins have been constructed and before
-   * `start()` resolves (i.e. before the first window loads — see
-   * `runtime/index.ts`). This mirrors how Android/iOS plugins override
-   * Capacitor's `load()`. The hook is detected structurally on the instance
-   * (never via `instanceof`, which would break across duplicated copies of
-   * this package), so both {@link ElectronPlugin} subclasses and marker-only
-   * plugins that implement a structural `load()` are picked up. It is a
-   * lifecycle hook, not a bridged method: `load` is reserved — it must not
-   * appear in the plugin's declared `methods` (rejected at boot by
-   * `validateDeclaredMethods`) and is never bridged to the renderer.
-   *
-   * Hooks run sequentially, not concurrently: a plugin may repoint the
-   * active bundle here, so a deterministic order (built-ins first, then
-   * manifest order) avoids interleaved repointing, and fail-fast on the
-   * first rejection gives a clean boot failure with the offending plugin
-   * named. A throwing/rejecting hook aborts boot, consistent with how a
-   * declared-but-missing method fails.
+   * Runs the plugins' `load()` lifecycle hooks. The hook is detected
+   * structurally (never via `instanceof`, which would break across duplicated
+   * copies of this package). Sequential on purpose: a plugin may repoint the
+   * active bundle here, so a deterministic order avoids interleaving.
    */
   private async loadPlugins(): Promise<void> {
     for (const [pluginName, plugin] of this.plugins) {
@@ -239,8 +228,8 @@ export class PluginHost {
     return {
       config: this.options.capacitorConfig,
       services: this.options.services,
-      notifyListeners: (eventName, data) =>
-        this.notifyListeners(pluginName, eventName, data),
+      notifyListeners: (eventName, data, options) =>
+        this.notifyListeners(pluginName, eventName, data, options),
     };
   }
 
@@ -278,13 +267,13 @@ export class PluginHost {
         }
         this.subscriptions.set(
           subscriptionKey(event.sender, pluginName, listenerId),
-          { pluginName, eventName, sender: event.sender },
+          { pluginName, eventName, listenerId, sender: event.sender },
         );
         if (!this.cleanedUpWebContents.has(event.sender)) {
           this.cleanedUpWebContents.add(event.sender);
           const webContentsId = event.sender.id;
           event.sender.once('destroyed', () =>
-            this.removeSubscriptionsOfSender(webContentsId),
+            this.dropSubscriptions(webContentsId),
           );
         }
         const retainedKey = `${pluginName}:${eventName}`;
@@ -330,7 +319,12 @@ export class PluginHost {
     );
   }
 
-  private removeSubscriptionsOfSender(webContentsId: number): void {
+  /**
+   * Drops every subscription of a page. Called synchronously before the
+   * platform reloads a window, so an event emitted right after the reload is
+   * retained for the new page instead of being delivered to the dying one.
+   */
+  dropSubscriptions(webContentsId: number): void {
     const prefix = `${webContentsId}:`;
     for (const key of [...this.subscriptions.keys()]) {
       if (key.startsWith(prefix)) {
@@ -391,10 +385,6 @@ function markedPluginClasses(pluginModule: PluginModule): MarkedPluginClass[] {
 /**
  * The declared methods are the contract; a declared method missing on the
  * instance is a plugin bug surfaced at boot instead of at call time.
- *
- * `load` is a reserved lifecycle hook (run by `loadPlugins`) and is never
- * bridged. Listing it in `methods` would expose the hook to the renderer for
- * arbitrary re-invocation, so it is rejected at boot.
  */
 export function validateDeclaredMethods(
   pluginName: string,
