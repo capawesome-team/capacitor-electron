@@ -28,4 +28,11 @@ describe('createTrustedUrlMatcher', () => {
     expect(isTrustedUrl('http://localhost:5173.evil.com/')).toBe(false);
     expect(isTrustedUrl('not a url')).toBe(false);
   });
+
+  it('never trusts opaque origins', () => {
+    const isTrustedUrl = createTrustedUrlMatcher(APP_ORIGIN, 'file:///app');
+
+    expect(isTrustedUrl('data:text/html,evil')).toBe(false);
+    expect(isTrustedUrl('file:///other')).toBe(false);
+  });
 });

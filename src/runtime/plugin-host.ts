@@ -87,7 +87,11 @@ export class PluginHost {
     ipcMain.on(BOOTSTRAP_CHANNEL, event => {
       // The preload bootstraps once per page load and restarts its listener
       // ids, so subscriptions of the previous page must not survive a reload.
-      this.dropSubscriptions(event.sender.id);
+      // A subframe bootstrap (preloads enabled in subframes) must not drop the
+      // main page's subscriptions.
+      if (event.senderFrame === event.sender.mainFrame) {
+        this.dropSubscriptions(event.sender.id);
+      }
       if (!this.isTrustedSender(event)) {
         event.returnValue = {
           platformName: this.options.platformName,

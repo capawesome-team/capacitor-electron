@@ -336,6 +336,21 @@ describe('PluginHost event subscriptions', () => {
     });
   });
 
+  it('keeps the main page subscriptions when a subframe bootstraps', async () => {
+    const { host, loadPage, addListener } = await startHost();
+    const page = createPage();
+    loadPage(page);
+    addListener(page, 1, 'changed');
+
+    loadPage({
+      ...page,
+      senderFrame: { url: 'https://embedded.example.com/' },
+    });
+    host.notifyListeners('Events', 'changed', 'data');
+
+    expect(page.sender.send).toHaveBeenCalledTimes(1);
+  });
+
   it('retains an event emitted right after the platform drops a page', async () => {
     const { host, loadPage, addListener } = await startHost();
     const page = createPage();

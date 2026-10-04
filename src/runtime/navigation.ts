@@ -46,9 +46,12 @@ function openExternalIfSafe(url: string): void {
   }
 }
 
+// Opaque origins (`file:`, `data:`) serialize to the string 'null' and must
+// never become a shared trusted origin.
 function originOf(url: string): string | null {
   try {
-    return new URL(url).origin;
+    const { origin } = new URL(url);
+    return origin === 'null' ? null : origin;
   } catch {
     return null;
   }
