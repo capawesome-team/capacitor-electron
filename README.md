@@ -51,18 +51,6 @@ The Electron platform is typically used to bring an existing Capacitor app to th
 
 - [Capacitor Electron Platform: Build Desktop Apps](https://capawesome.io/blog/announcing-the-capacitor-electron-platform/)
 
-## Supported Plugins
-
-Plugins integrate with the Electron platform in one of three ways:
-
-| Plugin | Support |
-| --- | --- |
-| [`@capacitor/app`](https://capacitorjs.com/docs/apis/app) | ✅ Built into the platform (`appUrlOpen`, `appStateChange`, `pause`, `resume`, `getInfo`, `getState`, `getLaunchUrl`, `exitApp`, `minimizeApp`) |
-| [`@capawesome-team/capacitor-sqlite`](https://capawesome.io/docs/sdks/capacitor/sqlite/) | ✅ Native Electron implementation via `node:sqlite` |
-| Plugins with a web implementation | ✅ Automatic web fallback |
-
-Plugins that require native functionality beyond their web implementation need a dedicated Electron implementation (see [Plugin Development](#plugin-development)). Is your favorite plugin missing? Just [open an issue](https://github.com/capawesome-team/capacitor-electron/issues) and we'll take a look!
-
 ## Installation
 
 You can use our **AI-Assisted Setup** to add the platform.
@@ -471,7 +459,7 @@ Read this before committing to the platform — these are inherent trade-offs, n
 
 ### Can I use any Capacitor plugin with this platform?
 
-Plugins with a dedicated Electron implementation or a sufficient web implementation work (see [Supported Plugins](#supported-plugins)). Plugins that only ship iOS/Android native code do not.
+Plugins with a dedicated Electron implementation or a sufficient web implementation work. Plugins that only ship iOS/Android native code do not.
 
 ### How do I update Electron in my app?
 
