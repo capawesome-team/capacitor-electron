@@ -1,4 +1,5 @@
-import { BrowserWindow, app, session } from 'electron';
+import { app, session } from 'electron';
+import type { BrowserWindow } from 'electron';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
@@ -9,10 +10,10 @@ import type { CapacitorAppConfig, PluginManifest } from '../shared/definitions';
 
 import { APP_PLUGIN_METHODS, APP_PLUGIN_NAME, AppPlugin } from './app-plugin';
 import { installAppState } from './app-state';
-import { Bundles } from './bundles';
+import { InMemoryBundleService } from './bundle-service';
 import { DEFAULT_CSP, DEFAULT_DEV_CSP, installDevServerCsp } from './csp';
 import { installDeepLinks } from './deep-links';
-import { installNavigationGuards } from './navigation';
+import { createTrustedUrlMatcher, installNavigationGuards } from './navigation';
 import { mergePluginConfig } from './plugin-config';
 import { PluginHost } from './plugin-host';
 import { installProtocolHandler, registerPrivilegedScheme } from './serving';
@@ -22,12 +23,12 @@ import {
   createSplashScreen,
   resolveSplashScreen,
 } from './splash';
-import { createMainWindow } from './window';
+import { createMainWindow, reloadAppWindows } from './window';
 
 export type { CapacitorElectronConfig } from '../config/index';
 export { defineConfig } from '../config/index';
 export type {
-  BundlesService,
+  BundleService,
   ElectronPluginContext,
   ElectronPluginLifecycle,
   PlatformServices,
@@ -65,18 +66,15 @@ export function createCapacitorElectronApp(
   const hostname = config.hostname ?? 'localhost';
   const appOrigin = `${scheme}://${hostname}`;
   const devServerUrl = process.env.CAPACITOR_ELECTRON_DEV_SERVER_URL;
-  const isTrustedUrl = (url: string): boolean =>
-    url === appOrigin ||
-    url.startsWith(`${appOrigin}/`) ||
-    (devServerUrl !== undefined && url.startsWith(devServerUrl));
+  const isTrustedUrl = createTrustedUrlMatcher(appOrigin, devServerUrl);
 
   let mainWindow: BrowserWindow | null = null;
-  const reloadWindows = (): void => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.reload();
-    }
-  };
-  const bundles = new Bundles({ reloadWindows });
+  const bundles = new InMemoryBundleService({
+    reloadWindows: () =>
+      reloadAppWindows(isTrustedUrl, webContents =>
+        pluginHost.dropSubscriptions(webContents.id),
+      ),
+  });
   const services: PlatformServices = { bundles };
   const pluginHost = new PluginHost({
     platformName: 'electron',

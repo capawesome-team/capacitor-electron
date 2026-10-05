@@ -1,12 +1,12 @@
-import type { BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CapacitorElectronConfig } from '../config/index';
 
-import { createMainWindow } from './window';
+import { createMainWindow, reloadAppWindows } from './window';
 
 vi.mock('electron', () => ({
-  BrowserWindow: vi.fn(),
+  BrowserWindow: Object.assign(vi.fn(), { getAllWindows: vi.fn() }),
   app: { getPath: () => '/tmp' },
 }));
 
@@ -84,5 +84,32 @@ describe('createMainWindow', () => {
 
     expect(onReadyToShow).toHaveBeenCalledTimes(1);
     expect(window.show).not.toHaveBeenCalled();
+  });
+});
+
+describe('reloadAppWindows', () => {
+  it('reloads only windows showing trusted app content', () => {
+    const createWindow = (url: string) => ({
+      webContents: { getURL: () => url, reloadIgnoringCache: vi.fn() },
+    });
+    const appWindow = createWindow('capacitor-electron://localhost/');
+    const splashWindow = createWindow('data:text/html,splash');
+    const popupWindow = createWindow('https://accounts.example.com/');
+    vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([
+      appWindow,
+      splashWindow,
+      popupWindow,
+    ] as unknown as BrowserWindow[]);
+
+    const beforeReload = vi.fn();
+    reloadAppWindows(
+      url => url.startsWith('capacitor-electron://localhost/'),
+      beforeReload,
+    );
+
+    expect(beforeReload).toHaveBeenCalledExactlyOnceWith(appWindow.webContents);
+    expect(appWindow.webContents.reloadIgnoringCache).toHaveBeenCalledTimes(1);
+    expect(splashWindow.webContents.reloadIgnoringCache).not.toHaveBeenCalled();
+    expect(popupWindow.webContents.reloadIgnoringCache).not.toHaveBeenCalled();
   });
 });

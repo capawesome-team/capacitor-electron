@@ -3,15 +3,16 @@ import { dirname, join, relative } from 'path';
 
 import type { PluginManifest } from '../shared/definitions';
 
+import type { ElectronPluginPackageJson } from './electron-src';
+import { getElectronSrc } from './electron-src';
 import { fail, logInfo, logWarn } from './log';
 
-interface PackageJson {
+interface PackageJson extends ElectronPluginPackageJson {
   name: string;
   version: string;
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
-  capacitor?: { electron?: { src?: string } };
 }
 
 interface VendoredPackage {
@@ -78,7 +79,12 @@ export function vendorCommand(): void {
       );
     }
     const packageJson = readPackageJson(packageDir);
-    const electronSrc = packageJson.capacitor?.electron?.src ?? 'electron';
+    const electronSrc = getElectronSrc(packageJson);
+    if (!electronSrc) {
+      return fail(
+        `${plugin.packageName} does not declare \`capacitor.electron.src\`. Run \`npx cap sync ${PLATFORM_PACKAGE_NAME}\` again.`,
+      );
+    }
     const vendorDir = join(vendorRoot, plugin.packageName);
     // A plugin's electron implementation is a self-contained bundle; only
     // the bundle and the package manifest are needed.

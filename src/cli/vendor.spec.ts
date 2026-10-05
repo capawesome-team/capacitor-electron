@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { vendorCommand } from './vendor';
 
@@ -74,7 +74,10 @@ const setUpApp = (): string => {
 };
 
 const originalCwd = process.cwd();
-afterEach(() => process.chdir(originalCwd));
+afterEach(() => {
+  process.chdir(originalCwd);
+  vi.restoreAllMocks();
+});
 
 describe('vendorCommand', () => {
   it('vendors the runtime, plugins, and the dependency closure', () => {
@@ -106,5 +109,21 @@ describe('vendorCommand', () => {
       existsSync(join(vendorRoot, 'installed-optional/package.json')),
     ).toBe(true);
     expect(existsSync(join(vendorRoot, 'missing-optional'))).toBe(false);
+  });
+
+  it('fails when a manifest plugin no longer declares capacitor.electron.src', () => {
+    const rootDir = setUpApp();
+    writeJson(join(rootDir, 'node_modules', 'my-plugin', 'package.json'), {
+      name: 'my-plugin',
+      version: '1.0.0',
+    });
+    process.chdir(join(rootDir, 'electron'));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
+
+    expect(() => vendorCommand()).toThrow('exit');
+    expect(exit).toHaveBeenCalledWith(1);
   });
 });
