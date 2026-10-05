@@ -17,7 +17,3 @@ The `services.bundles` platform service (interface `BundlesService`, now `Bundle
 - The persisted state file `capacitor-electron-bundles.json` in the user data directory is no longer read or written.
 
 A plugin that keeps a bundle active across restarts must persist that state itself and re-apply it in its `load()` lifecycle hook, and must own failed-boot rollback. The Capacitor Live Update plugin (8.5.0 or later) does this.
-
-### `capacitor.electron.src` is required
-
-`capacitor-electron vendor` no longer falls back to `electron` when a plugin's `package.json` does not declare `capacitor.electron.src`. Plugins must declare the directory explicitly, as `npx cap sync` already required.

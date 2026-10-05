@@ -111,7 +111,7 @@ describe('vendorCommand', () => {
     expect(existsSync(join(vendorRoot, 'missing-optional'))).toBe(false);
   });
 
-  it('fails when a manifest plugin no longer declares capacitor.electron.src', () => {
+  it('fails when a manifest plugin no longer declares capacitor.electron', () => {
     const rootDir = setUpApp();
     writeJson(join(rootDir, 'node_modules', 'my-plugin', 'package.json'), {
       name: 'my-plugin',

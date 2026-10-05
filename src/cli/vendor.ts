@@ -82,7 +82,7 @@ export function vendorCommand(): void {
     const electronSrc = getElectronSrc(packageJson);
     if (!electronSrc) {
       return fail(
-        `${plugin.packageName} does not declare \`capacitor.electron.src\`. Run \`npx cap sync ${PLATFORM_PACKAGE_NAME}\` again.`,
+        `${plugin.packageName} does not declare \`capacitor.electron\`. Run \`npx cap sync ${PLATFORM_PACKAGE_NAME}\` again.`,
       );
     }
     const vendorDir = join(vendorRoot, plugin.packageName);

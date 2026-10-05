@@ -93,12 +93,12 @@ The initial `cd electron && npm install` generates `electron/package-lock.json` 
 
 The scaffolded `electron/` project contains only files you own:
 
-| File | Purpose |
-| --- | --- |
-| `main.ts` | ~5 lines: imports the runtime and starts the app |
+| File                           | Purpose                                                 |
+| ------------------------------ | ------------------------------------------------------- |
+| `main.ts`                      | ~5 lines: imports the runtime and starts the app        |
 | `capacitor.electron.config.ts` | Typed platform options (window, CSP, deep links, hooks) |
-| `electron-builder.config.js` | Packaging configuration |
-| `assets/` | App icons |
+| `electron-builder.config.js`   | Packaging configuration                                 |
+| `assets/`                      | App icons                                               |
 
 Everything with logic lives in the versioned npm package and updates via `npm update` — your platform project never rots.
 
@@ -227,14 +227,14 @@ export default defineConfig({
 });
 ```
 
-| Option              | Type      | Default                                   | Description                                                                              |
-| ------------------- | --------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `enabled`           | `boolean` | shown when a splash file exists            | Set `false` to disable. Set `true` to require a splash file — boot fails if none is found. |
-| `path`              | `string`  | `assets/splash.html`, `assets/splash.png` | Splash file relative to the electron app directory.                                       |
-| `width`             | `number`  | `400`                                     | Window width in pixels.                                                                   |
-| `height`            | `number`  | `300`                                     | Window height in pixels.                                                                  |
-| `backgroundColor`   | `string`  | `'#ffffff'`                               | Window background and the canvas behind an image splash.                                  |
-| `minimumDurationMs` | `number`  | `0`                                       | Minimum time the splash stays visible.                                                    |
+| Option              | Type      | Default                                   | Description                                                                                |
+| ------------------- | --------- | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `enabled`           | `boolean` | shown when a splash file exists           | Set `false` to disable. Set `true` to require a splash file — boot fails if none is found. |
+| `path`              | `string`  | `assets/splash.html`, `assets/splash.png` | Splash file relative to the electron app directory.                                        |
+| `width`             | `number`  | `400`                                     | Window width in pixels.                                                                    |
+| `height`            | `number`  | `300`                                     | Window height in pixels.                                                                   |
+| `backgroundColor`   | `string`  | `'#ffffff'`                               | Window background and the canvas behind an image splash.                                   |
+| `minimumDurationMs` | `number`  | `0`                                       | Minimum time the splash stays visible.                                                     |
 
 **HTML vs. image:** an `.html` file is loaded directly, so you get full control over layout, fonts, and animation. An image is centered (`object-fit: contain`) on a `backgroundColor` canvas — convenient for a logo, but static.
 
@@ -352,7 +352,7 @@ Plugins declare their electron implementation via `package.json`:
 }
 ```
 
-The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so a build-time dependency on this package is not required.
+`src` is optional and defaults to `electron`, like `android`/`ios` in the Capacitor CLI. The implementation is an ES module at `<src>/dist/plugin.mjs` exporting plugin classes. A plugin class declares its Capacitor registration name and its public API via static metadata — the static property is the contract, so a build-time dependency on this package is not required.
 
 ### Recommended: extend `ElectronPlugin`
 
