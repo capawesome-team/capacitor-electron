@@ -15,6 +15,7 @@ The Capacitor Electron platform brings your web app and your Capacitor plugins t
 - 🖥️ **Cross-platform**: Build desktop apps for macOS, Windows, and Linux from one codebase.
 - ⚡ **Familiar workflow**: `cap add`, `cap sync`, `cap run` — the same commands as iOS and Android.
 - 🔌 **Plugin support**: Capacitor plugins with an Electron implementation work out of the box; plugins with a web implementation work automatically via fallback.
+- ⚡ **Live Updates**: Deliver web-bundle updates over the air with the [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) and Capawesome Cloud — the same workflow as on Android and iOS.
 - 🔒 **Security-first**: Sandboxed renderer, context isolation, strict Content-Security-Policy, and validated IPC — enabled by default and not configurable.
 - 🔗 **Deep links**: Custom URL schemes delivered through the standard `@capacitor/app` plugin's `appUrlOpen` event.
 - 📱 **App lifecycle**: `appStateChange`, `pause`, and `resume` events, exactly like on mobile.
@@ -34,6 +35,7 @@ The Electron platform is typically used to bring an existing Capacitor app to th
 
 - **Desktop companion apps**: Ship your mobile app's functionality to macOS, Windows, and Linux without a rewrite.
 - **Offline-first desktop tools**: Combine the platform with plugins like [SQLite](https://capawesome.io/docs/sdks/capacitor/sqlite/) for fully offline desktop applications.
+- **Instant desktop updates**: Ship fixes to the web layer without building and distributing a new installer, using [Live Updates](https://capawesome.io/docs/cloud/live-updates/electron/).
 - **Internal business tools**: Distribute apps directly to your team without app stores.
 - **Kiosk and point-of-sale apps**: Run your web app full screen on dedicated desktop hardware.
 - **Deep-link driven workflows**: Handle custom URL schemes on the desktop exactly like on mobile.
@@ -436,7 +438,7 @@ Code signing, notarization, targets (dmg/msi/nsis/AppImage/deb), and icons are s
 Two independent update layers, matching mobile:
 
 - **Binary updates** (Electron itself, the runtime, native modules): use [electron-updater](https://www.electron.build/auto-update) — the desktop analog of an app-store update. Wire it in your `main.ts`; it operates on the packaged artifacts produced above.
-- **Web-bundle updates**: the platform ships the serving primitive only — `services.bundles` (`setActiveBundle(dir | null)` switches the served directory in memory and reloads the app windows; `getActiveBundlePath()` returns it). The platform persists nothing and never rolls back: the OTA update product on top of it (download, persistence, failed-boot rollback, channels, verification) is deliberately not part of the platform and re-applies its active bundle in its plugin's `load()` hook.
+- **Web-bundle updates**: use the [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) with [Capawesome Cloud](https://capawesome.io/docs/cloud/live-updates/electron/) — download, verification, channels, and failed-boot rollback, exactly like on mobile. The platform itself only ships the serving primitive the plugin builds on: `services.bundles` (`setActiveBundle(dir | null)` switches the served directory in memory and reloads the app windows; `getActiveBundlePath()` returns it). The platform persists nothing and never rolls back; the plugin re-applies its active bundle in its `load()` hook.
 
 ## Electron Support Policy
 
@@ -469,8 +471,13 @@ Update the `electron` version in `electron/package.json` and run `npm install` t
 
 Yes. `Capacitor.getPlatform()` returns `'electron'` and `Capacitor.isNativePlatform()` returns `true`, so you can branch platform-specific code the same way as on iOS and Android.
 
+### Can I use Live Updates on Electron?
+
+Yes. The [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) (8.5.0 or later) has a native Electron implementation and uses the same Capawesome Cloud app as your mobile app. See [Update Electron Apps](https://capawesome.io/docs/cloud/live-updates/electron/).
+
 ## Related Plugins
 
+- [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) — over-the-air web-bundle updates with Capawesome Cloud, with a native Electron implementation.
 - [Capacitor SQLite plugin](https://capawesome.io/docs/sdks/capacitor/sqlite/) — local SQL database with a native Electron implementation.
 
 ## Newsletter
