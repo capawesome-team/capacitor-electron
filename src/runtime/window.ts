@@ -64,7 +64,8 @@ export function createMainWindow(
 
 /**
  * Reloads the windows showing app content; the splash screen and foreign
- * windows (e.g. OAuth popups) are left alone.
+ * windows (e.g. OAuth popups) are left alone. The cache is bypassed because
+ * another bundle may serve different content under the same asset URLs.
  */
 export function reloadAppWindows(
   isTrustedUrl: (url: string) => boolean,
@@ -73,7 +74,7 @@ export function reloadAppWindows(
   for (const { webContents } of BrowserWindow.getAllWindows()) {
     if (isTrustedUrl(webContents.getURL())) {
       beforeReload(webContents);
-      webContents.reload();
+      webContents.reloadIgnoringCache();
     }
   }
 }

@@ -90,7 +90,7 @@ describe('createMainWindow', () => {
 describe('reloadAppWindows', () => {
   it('reloads only windows showing trusted app content', () => {
     const createWindow = (url: string) => ({
-      webContents: { getURL: () => url, reload: vi.fn() },
+      webContents: { getURL: () => url, reloadIgnoringCache: vi.fn() },
     });
     const appWindow = createWindow('capacitor-electron://localhost/');
     const splashWindow = createWindow('data:text/html,splash');
@@ -108,8 +108,8 @@ describe('reloadAppWindows', () => {
     );
 
     expect(beforeReload).toHaveBeenCalledExactlyOnceWith(appWindow.webContents);
-    expect(appWindow.webContents.reload).toHaveBeenCalledTimes(1);
-    expect(splashWindow.webContents.reload).not.toHaveBeenCalled();
-    expect(popupWindow.webContents.reload).not.toHaveBeenCalled();
+    expect(appWindow.webContents.reloadIgnoringCache).toHaveBeenCalledTimes(1);
+    expect(splashWindow.webContents.reloadIgnoringCache).not.toHaveBeenCalled();
+    expect(popupWindow.webContents.reloadIgnoringCache).not.toHaveBeenCalled();
   });
 });
