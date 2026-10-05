@@ -484,6 +484,10 @@ Yes. The [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacito
 
 Stay up to date with the latest news and updates about the Capawesome, Capacitor, and Ionic ecosystem by subscribing to our [Capawesome Newsletter](https://capawesome.io/newsletter/).
 
+## Breaking Changes
+
+See [BREAKING.md](https://github.com/capawesome-team/capacitor-electron/blob/main/BREAKING.md).
+
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/capawesome-team/capacitor-electron/blob/main/CHANGELOG.md).
