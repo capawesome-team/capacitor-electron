@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/capawesome-team/capacitor-electron/compare/v0.1.1...v0.2.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* make bundles service a stateless root switch ([#8](https://github.com/capawesome-team/capacitor-electron/issues/8))
+
+### Features
+
+* make bundles service a stateless root switch ([#8](https://github.com/capawesome-team/capacitor-electron/issues/8)) ([0645ce0](https://github.com/capawesome-team/capacitor-electron/commit/0645ce0a23c0a0c48d1fd9560c9d93c933690385))
+
+
+### Bug Fixes
+
+* default capacitor.electron.src to electron like Capacitor does ([ce1260c](https://github.com/capawesome-team/capacitor-electron/commit/ce1260c344e657bcaae9033f0fabd1b4315d85ad))
+
 ## [0.1.1](https://github.com/capawesome-team/capacitor-electron/compare/v0.1.0...v0.1.1) (2026-08-04)
 
 
