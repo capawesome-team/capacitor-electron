@@ -476,6 +476,10 @@ Yes. `Capacitor.getPlatform()` returns `'electron'` and `Capacitor.isNativePlatf
 
 Yes. The [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) (8.5.0 or later) has a native Electron implementation and uses the same Capawesome Cloud app as your mobile app. See [Update Electron Apps](https://capawesome.io/docs/cloud/live-updates/electron/).
 
+### Where does my app store its data?
+
+Electron stores app data, such as databases created by plugins, in the `userData` directory. Its name comes from `productName` in `electron/package.json`, or from `name` if `productName` is missing. If you re-add the platform to an app that was added with version 0.2.0 or earlier, set `productName` to the previous `name` (`<app-name-slug>-electron`) to keep using the existing data.
+
 ## Related Plugins
 
 - [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) — over-the-air web-bundle updates with Capawesome Cloud, with a native Electron implementation.
