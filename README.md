@@ -338,6 +338,7 @@ Notes:
 
 - Deep links no longer require hand-written runtime code — declare the scheme in the platform config and listen to `@capacitor/app`'s `appUrlOpen` event.
 - Splash screens are picked up automatically from `electron/assets/`. Keep `assets/splash.png` and it just works; if you used a custom `splashScreenImageName: 'x.gif'`, either rename it to `assets/splash.png` or point the config at it via `splashScreen: { path: 'assets/x.gif' }` (see [Splash Screen](#splash-screen)).
+- Files in Electron's `userData` directory (e.g. SQLite databases) stay where they were: `electron/package.json` sets `productName` to your `appName`, which the old platform also used as the directory name. If your `appName` changed since you added the old platform, set `productName` to the previous name.
 - Plugins must provide an electron implementation for this platform's contract (see [Plugin Development](#plugin-development)); implementations written for the old platform are not loaded. Plugins whose web implementation is sufficient continue to work unchanged via the automatic fallback.
 
 ## Plugin Development
@@ -474,6 +475,10 @@ Yes. `Capacitor.getPlatform()` returns `'electron'` and `Capacitor.isNativePlatf
 ### Can I use Live Updates on Electron?
 
 Yes. The [Capacitor Live Update plugin](https://capawesome.io/docs/sdks/capacitor/live-update/) (8.5.0 or later) has a native Electron implementation and uses the same Capawesome Cloud app as your mobile app. See [Update Electron Apps](https://capawesome.io/docs/cloud/live-updates/electron/).
+
+### Where does my app store its data?
+
+Electron stores app data, such as databases created by plugins, in the `userData` directory. Its name comes from `productName` in `electron/package.json`, or from `name` if `productName` is missing. If you re-add the platform to an app that was added with version 0.2.0 or earlier, set `productName` to the previous `name` (`<app-name-slug>-electron`) to keep using the existing data.
 
 ## Related Plugins
 

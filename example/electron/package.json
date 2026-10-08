@@ -1,5 +1,6 @@
 {
   "name": "capacitor-electron-example-electron",
+  "productName": "Capacitor Electron Example",
   "private": true,
   "version": "0.0.0",
   "description": "Electron platform project for the Capacitor Electron Example.",

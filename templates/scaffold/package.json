@@ -1,5 +1,6 @@
 {
   "name": "{{APP_NAME_SLUG}}-electron",
+  "productName": "{{APP_NAME}}",
   "private": true,
   "version": "0.0.0",
   "description": "Electron platform project for {{APP_NAME}}.",
