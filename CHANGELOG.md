@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/capawesome-team/capacitor-electron/compare/v0.2.0...v0.2.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* set `productName` in the scaffolded `package.json` ([#10](https://github.com/capawesome-team/capacitor-electron/issues/10)) ([d65da6e](https://github.com/capawesome-team/capacitor-electron/commit/d65da6e9abe0ee40d9775fc11fbbe24e3a199327))
+
 ## [0.2.0](https://github.com/capawesome-team/capacitor-electron/compare/v0.1.1...v0.2.0) (2026-10-05)
 
 
