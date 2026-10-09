@@ -338,7 +338,8 @@ Notes:
 
 - Deep links no longer require hand-written runtime code — declare the scheme in the platform config and listen to `@capacitor/app`'s `appUrlOpen` event.
 - Splash screens are picked up automatically from `electron/assets/`. Keep `assets/splash.png` and it just works; if you used a custom `splashScreenImageName: 'x.gif'`, either rename it to `assets/splash.png` or point the config at it via `splashScreen: { path: 'assets/x.gif' }` (see [Splash Screen](#splash-screen)).
-- Files in Electron's `userData` directory (e.g. SQLite databases) stay where they were: `electron/package.json` sets `productName` to your `appName`, which the old platform also used as the directory name. If your `appName` changed since you added the old platform, set `productName` to the previous name.
+- Files in Electron's `userData` directory (e.g. SQLite databases) are stored in a directory named after `productName` (or `name`, if `productName` is missing) in `electron/package.json`. The new `electron/package.json` sets `productName` to your `appName`, which the old platform used as `name` by default. If your old `electron/package.json` used a different `productName` or `name` (e.g. because you renamed it to package your app), set `productName` in the new `electron/package.json` to that value to keep your existing data.
+- Web storage such as `localStorage` and IndexedDB is tied to the page's origin. The old platform served your app from `capacitor-electron://-`, this platform serves it from `capacitor-electron://localhost`. To keep your existing web storage, set `hostname: '-'` in `electron/capacitor.electron.config.ts`.
 - Plugins must provide an electron implementation for this platform's contract (see [Plugin Development](#plugin-development)); implementations written for the old platform are not loaded. Plugins whose web implementation is sufficient continue to work unchanged via the automatic fallback.
 
 ## Plugin Development
