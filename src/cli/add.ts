@@ -53,18 +53,49 @@ async function copyTemplates(
       entry.name === 'gitignore'
     ) {
       const content = await readFile(sourcePath, 'utf8');
-      await writeFile(targetPath, substitute(content, variables));
+      await writeFile(targetPath, substitute(content, entry.name, variables));
     } else {
       await cp(sourcePath, targetPath);
     }
   }
 }
 
-const substitute = (
+/**
+ * Replaces the `{{NAME}}` placeholders of a template file, escaping the values
+ * for the file type so that e.g. an app name with quotes keeps the file valid.
+ */
+export const substitute = (
   content: string,
+  fileName: string,
   variables: Record<string, string>,
-): string =>
-  content.replace(
-    /{{(\w+)}}/g,
-    (match, name: string) => variables[name] ?? match,
+): string => {
+  const escape = escaperFor(fileName);
+  return content.replace(/{{(\w+)}}/g, (match, name: string) =>
+    name in variables ? escape(variables[name]) : match,
   );
+};
+
+const escaperFor = (fileName: string): ((value: string) => string) => {
+  if (fileName.endsWith('.json')) {
+    return escapeJsonString;
+  }
+  if (fileName.endsWith('.js') || fileName.endsWith('.ts')) {
+    // Templates use single-quoted string literals.
+    return value => escapeJsonString(value).replace(/'/g, "\\'");
+  }
+  if (fileName.endsWith('.html')) {
+    return escapeHtml;
+  }
+  return value => value;
+};
+
+const escapeJsonString = (value: string): string =>
+  JSON.stringify(value).slice(1, -1);
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
