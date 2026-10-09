@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/capawesome-team/capacitor-electron/compare/v0.2.1...v0.2.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* escape the app name in scaffolded files and document data migration ([#12](https://github.com/capawesome-team/capacitor-electron/issues/12)) ([c5b9b08](https://github.com/capawesome-team/capacitor-electron/commit/c5b9b08dd6b2eb6f8f62ceab2082853523456bd2))
+
 ## [0.2.1](https://github.com/capawesome-team/capacitor-electron/compare/v0.2.0...v0.2.1) (2026-10-08)
 
 
