@@ -58,7 +58,7 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-2025
+          - windows-2022
         # Latest stable and the documented support floor.
         electron-version:
           - latest
