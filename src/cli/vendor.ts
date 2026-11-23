@@ -1,4 +1,12 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from 'fs';
 import { dirname, join, relative } from 'path';
 
 import type { PluginManifest } from '../shared/definitions';
@@ -176,10 +184,7 @@ function vendorDependencyClosure(
         vendorDir,
       });
     }
-    if (
-      existsSync(join(dependencyDir, 'binding.gyp')) ||
-      existsSync(join(dependencyDir, 'prebuilds'))
-    ) {
+    if (needsElectronRebuild(dependencyDir)) {
       nativePackages.add(dependencyName);
     }
     vendorDependencyClosure(
@@ -191,6 +196,23 @@ function vendorDependencyClosure(
       nativePackages,
     );
   }
+}
+
+/**
+ * Whether a dependency's native code is tied to Node's ABI. A `prebuilds`
+ * directory of plain shared libraries, opened through FFI, isn't.
+ */
+function needsElectronRebuild(dependencyDir: string): boolean {
+  const prebuilds = join(dependencyDir, 'prebuilds');
+  const addons = existsSync(prebuilds)
+    ? readdirSync(prebuilds, { recursive: true })
+        .map(String)
+        .filter(file => file.endsWith('.node'))
+    : [];
+  if (addons.length > 0) {
+    return addons.some(file => !/napi[^\\/]*\.node$/.test(file));
+  }
+  return existsSync(join(dependencyDir, 'binding.gyp'));
 }
 
 function vendorSubset(
@@ -215,7 +237,8 @@ function vendorSubset(
  * maps: walk `node_modules` directories from `fromDir` upwards.
  */
 function findPackageDir(fromDir: string, packageName: string): string | null {
-  let currentDir = fromDir;
+  // Use the real path; pnpm's node_modules is made of symlinks.
+  let currentDir = realpathSync(fromDir);
   for (;;) {
     const candidate = join(currentDir, 'node_modules', packageName);
     if (existsSync(join(candidate, 'package.json'))) {

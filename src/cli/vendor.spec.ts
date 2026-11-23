@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -10,8 +19,11 @@ const writeJson = (filePath: string, value: unknown): void => {
   writeFileSync(filePath, JSON.stringify(value));
 };
 
+const appRoots: string[] = [];
+
 const setUpApp = (): string => {
   const rootDir = mkdtempSync(join(tmpdir(), 'capacitor-electron-vendor-'));
+  appRoots.push(rootDir);
   writeJson(join(rootDir, 'package.json'), {
     dependencies: { 'my-plugin': '1.0.0' },
   });
@@ -77,6 +89,9 @@ const originalCwd = process.cwd();
 afterEach(() => {
   process.chdir(originalCwd);
   vi.restoreAllMocks();
+  for (const rootDir of appRoots.splice(0)) {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
 });
 
 describe('vendorCommand', () => {
@@ -109,6 +124,86 @@ describe('vendorCommand', () => {
       existsSync(join(vendorRoot, 'installed-optional/package.json')),
     ).toBe(true);
     expect(existsSync(join(vendorRoot, 'missing-optional'))).toBe(false);
+  });
+
+  it.each([
+    {
+      kind: 'ABI-specific prebuilds',
+      files: ['prebuilds/linux-x64/addon.node'],
+      warns: true,
+    },
+    {
+      kind: 'mixed N-API and ABI-specific prebuilds',
+      files: [
+        'prebuilds/linux-x64/addon.napi.node',
+        'prebuilds/linux-x64/addon.node',
+      ],
+      warns: true,
+    },
+    { kind: 'binding.gyp only', files: ['binding.gyp'], warns: true },
+    {
+      kind: 'shared-library-only prebuilds',
+      files: ['prebuilds/linux-x64/libexample.so'],
+      warns: false,
+    },
+    {
+      kind: 'N-API-only prebuilds with binding.gyp',
+      files: ['prebuilds/linux-x64/addon.napi.node', 'binding.gyp'],
+      warns: false,
+    },
+  ])('sets rebuild warning to $warns for $kind', ({ files, warns }) => {
+    const rootDir = setUpApp();
+    const depDir = join(rootDir, 'node_modules', 'some-dep');
+    for (const file of files) {
+      const filePath = join(depDir, file);
+      mkdirSync(join(filePath, '..'), { recursive: true });
+      writeFileSync(filePath, '');
+    }
+    process.chdir(join(rootDir, 'electron'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    vendorCommand();
+
+    if (warns) {
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Native Node modules detected (some-dep)'),
+      );
+    } else {
+      expect(warn).not.toHaveBeenCalled();
+    }
+  });
+
+  it('vendors a dependency installed beside a symlinked plugin in pnpm', () => {
+    const rootDir = setUpApp();
+    const modulesDir = join(rootDir, 'node_modules');
+    const pnpmModulesDir = join(
+      modulesDir,
+      '.pnpm',
+      'my-plugin@1.0.0',
+      'node_modules',
+    );
+    mkdirSync(pnpmModulesDir, { recursive: true });
+    const pluginDir = join(modulesDir, 'my-plugin');
+    const pluginTarget = join(pnpmModulesDir, 'my-plugin');
+    renameSync(pluginDir, pluginTarget);
+    renameSync(join(modulesDir, 'some-dep'), join(pnpmModulesDir, 'some-dep'));
+    symlinkSync(pluginTarget, pluginDir, 'junction');
+    process.chdir(join(rootDir, 'electron'));
+
+    vendorCommand();
+
+    expect(
+      readFileSync(
+        join(
+          rootDir,
+          'electron',
+          'vendor',
+          'node_modules',
+          'some-dep/index.js',
+        ),
+        'utf8',
+      ),
+    ).toBe('module.exports = 1;');
   });
 
   it('fails when a manifest plugin no longer declares capacitor.electron', () => {
