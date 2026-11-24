@@ -70,4 +70,28 @@ describe('generatePluginManifest', () => {
     ]);
     expect(manifest.platformVersion).toMatch(/^\d+\.\d+\.\d+/);
   });
+
+  it('resolves package.json and node_modules from a parent directory in a monorepo', async () => {
+    // Workspace root holds package.json and node_modules (e.g. Nx); the
+    // Capacitor root is a nested app directory without its own package.json.
+    const workspace = setUpApp();
+    const rootDir = join(workspace.rootDir, 'apps', 'my-app');
+    mkdirSync(rootDir, { recursive: true });
+    const context: CliContext = {
+      ...workspace,
+      rootDir,
+      platformDir: join(rootDir, 'electron'),
+      generatedDir: join(rootDir, 'electron', 'generated'),
+      appDir: join(rootDir, 'electron', 'app'),
+    };
+
+    const manifest = await generatePluginManifest(context);
+
+    expect(manifest.plugins).toEqual([
+      {
+        packageName: 'with-electron',
+        specifier: 'with-electron/electron/dist/plugin.mjs',
+      },
+    ]);
+  });
 });

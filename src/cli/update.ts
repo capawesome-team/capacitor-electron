@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
 
 import type {
   PluginManifest,
@@ -13,6 +13,7 @@ import { embedConfig } from './copy';
 import type { ElectronPluginPackageJson } from './electron-src';
 import { getElectronSrc } from './electron-src';
 import { logInfo, logWarn } from './log';
+import { findPackageDir } from './vendor';
 
 export async function updateCommand(context: CliContext): Promise<void> {
   requirePlatformDir(context);
@@ -41,7 +42,7 @@ export async function generatePluginManifest(
   context: CliContext,
 ): Promise<PluginManifest> {
   const rootPackageJson = JSON.parse(
-    await readFile(join(context.rootDir, 'package.json'), 'utf8'),
+    await readFile(findPackageJsonPath(context.rootDir), 'utf8'),
   ) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
@@ -61,15 +62,37 @@ export async function generatePluginManifest(
   return { platformVersion: platformVersion(), plugins };
 }
 
+/**
+ * The app's `package.json`: the nearest one at or above the Capacitor root,
+ * so monorepos (Nx, npm/pnpm/yarn workspaces) with a single workspace-level
+ * `package.json` are supported, as the Capacitor CLI does for iOS/Android.
+ */
+function findPackageJsonPath(rootDir: string): string {
+  let currentDir = rootDir;
+  for (;;) {
+    const candidate = join(currentDir, 'package.json');
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      return join(rootDir, 'package.json');
+    }
+    currentDir = parentDir;
+  }
+}
+
 function scanDependency(
   context: CliContext,
   dependencyName: string,
 ): PluginPackageManifest | null {
-  const packageDir = join(context.rootDir, 'node_modules', dependencyName);
-  const packageJsonPath = join(packageDir, 'package.json');
-  if (!existsSync(packageJsonPath)) {
+  // Resolved like Node does, so dependencies hoisted to a workspace root
+  // `node_modules` are found too.
+  const packageDir = findPackageDir(context.rootDir, dependencyName);
+  if (!packageDir) {
     return null;
   }
+  const packageJsonPath = join(packageDir, 'package.json');
   const packageJson = JSON.parse(
     readFileSync(packageJsonPath, 'utf8'),
   ) as ElectronPluginPackageJson;

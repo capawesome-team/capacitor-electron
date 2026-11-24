@@ -214,7 +214,10 @@ function vendorSubset(
  * Node's module resolution for bare specifiers, without touching `exports`
  * maps: walk `node_modules` directories from `fromDir` upwards.
  */
-function findPackageDir(fromDir: string, packageName: string): string | null {
+export function findPackageDir(
+  fromDir: string,
+  packageName: string,
+): string | null {
   let currentDir = fromDir;
   for (;;) {
     const candidate = join(currentDir, 'node_modules', packageName);
