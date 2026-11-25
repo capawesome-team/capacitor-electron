@@ -1,4 +1,12 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from 'fs';
 import { dirname, join, relative } from 'path';
 
 import type { PluginManifest } from '../shared/definitions';
@@ -176,10 +184,7 @@ function vendorDependencyClosure(
         vendorDir,
       });
     }
-    if (
-      existsSync(join(dependencyDir, 'binding.gyp')) ||
-      existsSync(join(dependencyDir, 'prebuilds'))
-    ) {
+    if (hasNodeAddon(dependencyDir)) {
       nativePackages.add(dependencyName);
     }
     vendorDependencyClosure(
@@ -191,6 +196,18 @@ function vendorDependencyClosure(
       nativePackages,
     );
   }
+}
+
+function hasNodeAddon(packageDir: string): boolean {
+  const prebuildsDir = join(packageDir, 'prebuilds');
+  return (
+    existsSync(join(packageDir, 'binding.gyp')) ||
+    // `prebuilds` may hold only shared libraries, which need no rebuild.
+    (existsSync(prebuildsDir) &&
+      readdirSync(prebuildsDir, { recursive: true, encoding: 'utf8' }).some(
+        file => file.endsWith('.node'),
+      ))
+  );
 }
 
 function vendorSubset(
@@ -215,7 +232,8 @@ function vendorSubset(
  * maps: walk `node_modules` directories from `fromDir` upwards.
  */
 function findPackageDir(fromDir: string, packageName: string): string | null {
-  let currentDir = fromDir;
+  // Use the real path; pnpm's node_modules is made of symlinks.
+  let currentDir = realpathSync(fromDir);
   for (;;) {
     const candidate = join(currentDir, 'node_modules', packageName);
     if (existsSync(join(candidate, 'package.json'))) {
