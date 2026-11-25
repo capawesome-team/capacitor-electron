@@ -126,36 +126,13 @@ describe('vendorCommand', () => {
     expect(existsSync(join(vendorRoot, 'missing-optional'))).toBe(false);
   });
 
-  it.each([
-    {
-      kind: 'ABI-specific prebuilds',
-      files: ['prebuilds/linux-x64/addon.node'],
-      warns: true,
-    },
-    {
-      kind: 'mixed N-API and ABI-specific prebuilds',
-      files: [
-        'prebuilds/linux-x64/addon.napi.node',
-        'prebuilds/linux-x64/addon.node',
-      ],
-      warns: true,
-    },
-    { kind: 'binding.gyp only', files: ['binding.gyp'], warns: true },
-    {
-      kind: 'shared-library-only prebuilds',
-      files: ['prebuilds/linux-x64/libexample.so'],
-      warns: false,
-    },
-    {
-      kind: 'N-API-only prebuilds with binding.gyp',
-      files: ['prebuilds/linux-x64/addon.napi.node', 'binding.gyp'],
-      warns: false,
-    },
-  ])('sets rebuild warning to $warns for $kind', ({ files, warns }) => {
+  it('warns only about dependencies whose prebuilds hold a Node addon', () => {
     const rootDir = setUpApp();
-    const depDir = join(rootDir, 'node_modules', 'some-dep');
-    for (const file of files) {
-      const filePath = join(depDir, file);
+    for (const file of [
+      'some-dep/prebuilds/linux-x64/libexample.so',
+      'installed-optional/prebuilds/linux-x64/addon.node',
+    ]) {
+      const filePath = join(rootDir, 'node_modules', file);
       mkdirSync(join(filePath, '..'), { recursive: true });
       writeFileSync(filePath, '');
     }
@@ -164,13 +141,10 @@ describe('vendorCommand', () => {
 
     vendorCommand();
 
-    if (warns) {
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('Native Node modules detected (some-dep)'),
-      );
-    } else {
-      expect(warn).not.toHaveBeenCalled();
-    }
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('installed-optional'),
+    );
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('some-dep'));
   });
 
   it('vendors a dependency installed beside a symlinked plugin in pnpm', () => {

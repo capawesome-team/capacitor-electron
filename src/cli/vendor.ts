@@ -184,7 +184,7 @@ function vendorDependencyClosure(
         vendorDir,
       });
     }
-    if (needsElectronRebuild(dependencyDir)) {
+    if (hasNodeAddon(dependencyDir)) {
       nativePackages.add(dependencyName);
     }
     vendorDependencyClosure(
@@ -198,21 +198,16 @@ function vendorDependencyClosure(
   }
 }
 
-/**
- * Whether a dependency's native code is tied to Node's ABI. A `prebuilds`
- * directory of plain shared libraries, opened through FFI, isn't.
- */
-function needsElectronRebuild(dependencyDir: string): boolean {
-  const prebuilds = join(dependencyDir, 'prebuilds');
-  const addons = existsSync(prebuilds)
-    ? readdirSync(prebuilds, { recursive: true })
-        .map(String)
-        .filter(file => file.endsWith('.node'))
-    : [];
-  if (addons.length > 0) {
-    return addons.some(file => !/napi[^\\/]*\.node$/.test(file));
-  }
-  return existsSync(join(dependencyDir, 'binding.gyp'));
+function hasNodeAddon(packageDir: string): boolean {
+  const prebuildsDir = join(packageDir, 'prebuilds');
+  return (
+    existsSync(join(packageDir, 'binding.gyp')) ||
+    // `prebuilds` may hold only shared libraries, which need no rebuild.
+    (existsSync(prebuildsDir) &&
+      readdirSync(prebuildsDir, { recursive: true, encoding: 'utf8' }).some(
+        file => file.endsWith('.node'),
+      ))
+  );
 }
 
 function vendorSubset(
