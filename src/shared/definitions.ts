@@ -18,7 +18,8 @@ export interface PluginPackageManifest {
   packageName: string;
   /**
    * Module specifier of the plugin's compiled electron implementation
-   * (an ES module), resolvable from the app's root `node_modules`.
+   * (an ES module), resolvable from a `node_modules` in the app root or above
+   * it.
    */
   specifier: string;
 }
