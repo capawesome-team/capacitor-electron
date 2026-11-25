@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/capawesome-team/capacitor-electron/compare/v0.2.2...v0.2.3) (2026-11-25)
+
+
+### Bug Fixes
+
+* find plugins in monorepos ([#21](https://github.com/capawesome-team/capacitor-electron/issues/21)) ([a203d0c](https://github.com/capawesome-team/capacitor-electron/commit/a203d0ce50d0fa720924118ae614d5554f7e30cc))
+* support pnpm and ignore prebuilds folders without a .node file ([#18](https://github.com/capawesome-team/capacitor-electron/issues/18)) ([94d3e2c](https://github.com/capawesome-team/capacitor-electron/commit/94d3e2c6ff2233f75c0edb3163568b510aabef50))
+
 ## [0.2.2](https://github.com/capawesome-team/capacitor-electron/compare/v0.2.1...v0.2.2) (2026-10-09)
 
 
