@@ -102,6 +102,28 @@ The scaffolded `electron/` project contains only files you own:
 
 Everything with logic lives in the versioned npm package and updates via `npm update` — your platform project never rots.
 
+### Monorepos
+
+The platform also works in a monorepo, for example with npm, pnpm or Yarn workspaces or with Nx. The dependencies of your app are read from the nearest `package.json` in your Capacitor project or above it. Plugins are also found in a `node_modules` folder above your Capacitor project.
+
+In an Nx workspace, the Capacitor CLI reads the scripts of a platform from the `package.json` in the workspace root. Add the following scripts to it. Without them, Capacitor CLI commands such as `npx cap add @capawesome/capacitor-electron` do nothing:
+
+```json
+{
+  "scripts": {
+    "capacitor:add": "node ./dist/cli/index.js add",
+    "capacitor:copy": "node ./dist/cli/index.js copy",
+    "capacitor:update": "node ./dist/cli/index.js update",
+    "capacitor:open": "node ./dist/cli/index.js open",
+    "capacitor:run": "node ./dist/cli/index.js run"
+  }
+}
+```
+
+The Capacitor CLI runs these scripts inside the platform package, so use the paths as shown.
+
+If you use the `postinstall` script from above in the workspace root, point it to the `electron` folder of your app, for example `cd apps/my-app/electron && npm ci && cd ../../..`.
+
 ## Configuration
 
 Platform options are configured in `electron/capacitor.electron.config.ts` with full type safety:

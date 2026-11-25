@@ -11,6 +11,15 @@ const writeJson = (filePath: string, value: unknown): void => {
   writeFileSync(filePath, JSON.stringify(value));
 };
 
+const createContext = (rootDir: string): CliContext => ({
+  rootDir,
+  webDir: join(rootDir, 'www'),
+  config: {},
+  platformDir: join(rootDir, 'electron'),
+  generatedDir: join(rootDir, 'electron', 'generated'),
+  appDir: join(rootDir, 'electron', 'app'),
+});
+
 const setUpApp = (): CliContext => {
   const rootDir = mkdtempSync(join(tmpdir(), 'capacitor-electron-test-'));
   writeJson(join(rootDir, 'package.json'), {
@@ -46,14 +55,7 @@ const setUpApp = (): CliContext => {
     join(rootDir, 'node_modules', 'with-missing-dist', 'package.json'),
     { name: 'with-missing-dist', capacitor: { electron: { src: 'electron' } } },
   );
-  return {
-    rootDir,
-    webDir: join(rootDir, 'www'),
-    config: {},
-    platformDir: join(rootDir, 'electron'),
-    generatedDir: join(rootDir, 'electron', 'generated'),
-    appDir: join(rootDir, 'electron', 'app'),
-  };
+  return createContext(rootDir);
 };
 
 describe('generatePluginManifest', () => {
@@ -69,5 +71,20 @@ describe('generatePluginManifest', () => {
       },
     ]);
     expect(manifest.platformVersion).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('finds package.json and node_modules above the Capacitor root', async () => {
+    const workspaceDir = setUpApp().rootDir;
+    const rootDir = join(workspaceDir, 'apps', 'my-app');
+    mkdirSync(rootDir, { recursive: true });
+
+    const manifest = await generatePluginManifest(createContext(rootDir));
+
+    expect(manifest.plugins).toEqual([
+      {
+        packageName: 'with-electron',
+        specifier: 'with-electron/electron/dist/plugin.mjs',
+      },
+    ]);
   });
 });

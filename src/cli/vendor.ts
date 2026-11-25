@@ -38,7 +38,8 @@ const PLATFORM_PACKAGE_NAME = '@capawesome/capacitor-electron';
 /**
  * Prepares the user-owned `electron/` project for packaging. electron-builder
  * only includes files inside the project, but at runtime the platform and the
- * plugins are resolved from the app root `node_modules`. This command copies
+ * plugins are resolved from a `node_modules` in the app root or above it.
+ * This command copies
  * them — plus their production, peer, and installed optional dependency
  * closure — into
  * `electron/vendor/node_modules`, which the scaffolded electron-builder
@@ -80,7 +81,9 @@ export function vendorCommand(): void {
   });
 
   for (const plugin of manifest.plugins) {
-    const packageDir = findPackageDir(rootDir, plugin.packageName);
+    const packageDir = findPackageDir(rootDir, {
+      packageName: plugin.packageName,
+    });
     if (!packageDir) {
       return fail(
         `${plugin.packageName} is not installed in ${rootDir}. Run \`npm install\` and \`npx cap sync ${PLATFORM_PACKAGE_NAME}\` first.`,
@@ -146,7 +149,9 @@ function vendorDependencyClosure(
     ) {
       continue;
     }
-    const dependencyDir = findPackageDir(dependentDir, dependencyName);
+    const dependencyDir = findPackageDir(dependentDir, {
+      packageName: dependencyName,
+    });
     if (!dependencyDir) {
       const optional =
         dependentPackageJson.optionalDependencies?.[dependencyName] !==
@@ -231,7 +236,10 @@ function vendorSubset(
  * Node's module resolution for bare specifiers, without touching `exports`
  * maps: walk `node_modules` directories from `fromDir` upwards.
  */
-function findPackageDir(fromDir: string, packageName: string): string | null {
+export function findPackageDir(
+  fromDir: string,
+  { packageName }: { packageName: string },
+): string | null {
   // Use the real path; pnpm's node_modules is made of symlinks.
   let currentDir = realpathSync(fromDir);
   for (;;) {
